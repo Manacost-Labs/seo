@@ -361,6 +361,32 @@ final class ShortLinksPage {
 		return $known[ $error ] ?? $error;
 	}
 
+	/**
+	 * QR-код короткого адреса: картинка SVG строится здесь же, на сервере, без сторонних сервисов.
+	 *
+	 * @param string $url  Короткий адрес.
+	 * @param string $slug Код ссылки: из него имя файла.
+	 */
+	private function qr( string $url, string $slug ): void {
+		try {
+			$svg = \IndexPilot\ShortLinks\QrCode::encode( $url )->svg( 5 );
+		} catch ( \InvalidArgumentException $error ) {
+			return;
+		}
+
+		echo '<h3>' . esc_html__( 'QR-код', 'indexpilot' ) . ' ';
+		HelpTip::render( __( 'Ничего вписывать не нужно: код ведёт на короткий адрес выше.', 'indexpilot' ), __( 'Для заставки стрима и печати: зритель наводит камеру и попадает по короткой ссылке, переход засчитывается.', 'indexpilot' ) );
+		echo '</h3>';
+		// Картинка собрана кодом плагина только из чисел и постоянной разметки — пользовательского текста в ней нет.
+		echo '<div data-indexpilot-qr style="max-width:240px">' . $svg . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG целиком построен QrCode из модулей матрицы.
+		printf(
+			'<p><a class="button" download="%1$s" href="%2$s">%3$s</a></p>',
+			esc_attr( 'qr-' . $slug . '.svg' ),
+			esc_attr( 'data:image/svg+xml;base64,' . base64_encode( $svg ) ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- картинка для скачивания.
+			esc_html__( 'Скачать SVG', 'indexpilot' )
+		);
+	}
+
 	/** Подробности ссылки и форма изменения цели. */
 	private function details(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- просмотр отчёта.
@@ -381,6 +407,8 @@ final class ShortLinksPage {
 		<?php submit_button( __( 'Изменить адрес', 'indexpilot' ) ); ?>
 </form>
 		<?php
+		$this->qr( $this->router->url( $link['slug'] ), $link['slug'] );
+
 		if ( null === $this->click_log ) {
 			echo '<p>' . esc_html__( 'Журнал переходов не подключён.', 'indexpilot' ) . '</p>';
 			return;
