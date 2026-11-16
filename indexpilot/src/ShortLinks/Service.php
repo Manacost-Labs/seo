@@ -151,6 +151,21 @@ final class Service {
 	 */
 	public function resolve( string $slug ): ?array {
 		$slug = Slug::normalize( $slug );
+
+		// Короткий адрес опубликованной записи важнее своей ссылки с тем же кодом:
+		// иначе ссылку, созданную заранее, нельзя было бы отличить от адреса будущей статьи.
+		$post_id = Slug::post_id( $slug );
+		$url     = $post_id > 0 ? (string) ( $this->post_url )( $post_id ) : '';
+
+		if ( '' !== $url ) {
+			// Короткий адрес записи постоянный, как и сама запись: перенаправление 301.
+			return array(
+				'target' => $url,
+				'code'   => 301,
+				'custom' => false,
+			);
+		}
+
 		$link = $this->store->find( $slug );
 
 		if ( null !== $link ) {
@@ -163,15 +178,7 @@ final class Service {
 			);
 		}
 
-		$post_id = Slug::post_id( $slug );
-		$url     = $post_id > 0 ? (string) ( $this->post_url )( $post_id ) : '';
-
-		// Короткий адрес записи постоянный, как и сама запись: перенаправление 301.
-		return '' === $url ? null : array(
-			'target' => $url,
-			'code'   => 301,
-			'custom' => false,
-		);
+		return null;
 	}
 
 	/**
@@ -216,7 +223,7 @@ final class Service {
 	private function free_slug(): string {
 		do {
 			$slug = Slug::random();
-		} while ( $this->taken( $slug ) );
+		} while ( $this->taken( $slug ) || Slug::post_id( $slug ) > 0 );
 
 		return $slug;
 	}

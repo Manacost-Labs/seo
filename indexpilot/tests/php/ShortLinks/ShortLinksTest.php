@@ -129,7 +129,7 @@ final class ShortLinksTest extends TestCase {
 		self::assertIsArray( $service->create( 'https://site.test/a/', 'promo' ) );
 		self::assertIsString( $service->create( 'https://site.test/b/', 'promo' ) );
 		self::assertIsString( $service->create( 'https://site.test/c/', 'pzz' ), 'Код опубликованной записи занять нельзя.' );
-		self::assertIsArray( $service->create( 'https://site.test/d/', 'p6' ), 'Код несуществующей записи свободен.' );
+		self::assertIsArray( $service->create( 'https://site.test/d/', 'p6' ), 'Код несуществующей записи свободен: если запись появится, её адрес всё равно будет важнее.' );
 
 		// Код не задан — выдаётся свободный, каждый раз новый.
 		$first  = $service->create( 'https://site.test/e/' );
@@ -172,5 +172,14 @@ final class ShortLinksTest extends TestCase {
 		self::assertSame( array( '' => 2 ), $log->by_referrer( 'test', 30 ) );
 		self::assertSame( array( gmdate( 'Y-m-d' ) => 2 ), $log->by_day( 'test', 1 ) );
 		self::assertSame( array(), $log->by_day( 'test', 0 ) );
+	}
+
+	public function test_custom_link_cannot_take_the_address_of_a_post(): void {
+		$store   = new ArrayShortLinkStore();
+		$service = $this->service( $store );
+
+		// Ссылка с кодом будущей записи (черновик) после её публикации не перехватывает адрес записи.
+		$store->insert( 'p5', 'https://evil.test/', 302 );
+		self::assertSame( 'https://site.test/?p=5', $service->resolve( 'p5' )['target'] );
 	}
 }
