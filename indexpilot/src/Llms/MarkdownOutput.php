@@ -30,7 +30,7 @@ final class MarkdownOutput {
 	/**
 	 * Шорткоды, текст внутри которых закрыт от посторонних: он в Markdown не попадает.
 	 */
-	private const HIDDEN = array( 'locker', 'sociallocker', 'emaillocker', 'signinlocker', 'onp-sl', 'onp-sl-locker', 'content_locker', 'paywall', 'premium', 'members', 'members_only', 'restrict', 'private', 'boosty' );
+	private const HIDDEN = \IndexPilot\Schema\Paywall::SHORTCODES;
 
 	/**
 	 * Шорткоды плагина, которые в Markdown не нужны: краткий ответ уже стоит под заголовком, а ссылки на соцсети —

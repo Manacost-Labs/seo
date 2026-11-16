@@ -48,12 +48,19 @@ final class Verification {
 			return;
 		}
 
+		$tags = '';
+
 		foreach ( self::TAGS as $name => $setting ) {
 			$code = self::code( (string) $this->settings->general( $setting ) );
 
 			if ( '' !== $code ) {
-				printf( '<meta name="%s" content="%s">' . "\n", esc_attr( $name ), esc_attr( $code ) );
+				$tags .= sprintf( '<meta name="%s" content="%s">' . "\n", esc_attr( $name ), esc_attr( $code ) );
 			}
+		}
+
+		// Метки-комментарии: по ним «Проверить страницу» отличает теги плагина от тегов темы.
+		if ( '' !== $tags ) {
+			echo "<!-- IndexPilot: подтверждение прав -->\n" . $tags . "<!-- /IndexPilot -->\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- значения экранированы выше.
 		}
 	}
 

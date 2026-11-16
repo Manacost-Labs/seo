@@ -268,6 +268,7 @@ final class Plugin {
 					( new \IndexPilot\Admin\RedirectsPage( $this->redirect_store(), array( $this, 'redirect_manager' ), $this->redirects(), $this->not_found_store() ) )->register();
 					( new \IndexPilot\Admin\NotFoundPage( $this->not_found_store(), $this->db() ) )->register();
 					( new \IndexPilot\Admin\HealthPage( $this->health() ) )->register();
+					( new \IndexPilot\Admin\HeadInspector() )->register();
 					( new LinksReport( $this->link_scanner(), $this->link_reports() ) )->register();
 					( new \IndexPilot\Admin\Reports\ImagesReport() )->register();
 					( new SettingsPage( $this->settings(), $this->site_defaults(), $this->variables() ) )->register();
@@ -494,6 +495,8 @@ final class Plugin {
 					( new Head( $this->resolver(), $this->settings() ) )->register();
 					( new SchemaOutput( new PageData( $this->resolver(), $this->settings(), $this->trail(), new AuthorProfile(), $this->faq_block() ), new GraphBuilder() ) )->register();
 					( new Verification( $this->settings() ) )->register();
+					// Закрытые части записи: обёртка с классом и пометка платного содержимого в разметке.
+					( new \IndexPilot\Schema\Paywall() )->register();
 				}
 			}
 		);

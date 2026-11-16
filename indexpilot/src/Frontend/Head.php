@@ -127,6 +127,8 @@ final class Head {
 			printf( '<link rel="canonical" href="%s">' . "\n", esc_url( $meta->canonical ) );
 		}
 
+		$this->render_pagination();
+
 		$context = $this->context();
 		if ( Context::POST === $context->type && post_type_supports( $context->subtype, 'author' ) ) {
 			$author = (string) get_the_author_meta( 'display_name', (int) get_post_field( 'post_author', $context->object_id ) );
@@ -184,6 +186,15 @@ final class Head {
 			}
 		}
 
+		// Метки статьи: по тегу на каждую. Термины записи уже загружены основным запросом страницы — запроса к базе нет.
+		if ( 'article' === $meta->og_type && Context::POST === $context->type ) {
+			$tags = get_the_terms( $context->object_id, 'post_tag' );
+
+			foreach ( is_array( $tags ) ? array_slice( $tags, 0, 10 ) : array() as $tag ) {
+				printf( '<meta property="article:tag" content="%s">' . "\n", esc_attr( $tag->name ) );
+			}
+		}
+
 		$twitter = array(
 			'twitter:card'        => is_array( $image ) ? 'summary_large_image' : 'summary',
 			'twitter:title'       => $meta->og_title,
@@ -195,6 +206,47 @@ final class Head {
 			if ( '' !== (string) $content ) {
 				printf( '<meta name="%s" content="%s">' . "\n", esc_attr( $name ), esc_attr( (string) $content ) );
 			}
+		}
+	}
+
+	/**
+	 * Теги rel="prev" и rel="next" на страницах пагинации: у архивов и у записей, разбитых на части.
+	 * Число страниц архива уже посчитано основным запросом, текст записи уже загружен — запросов к базе нет.
+	 */
+	private function render_pagination(): void {
+		$context = $this->context();
+		$links   = array();
+
+		if ( Context::POST === $context->type ) {
+			$post = get_post( $context->object_id );
+
+			if ( ! $post instanceof \WP_Post || post_password_required( $post ) ) {
+				return;
+			}
+
+			$structure = (string) get_option( 'permalink_structure' );
+			$permalink = (string) get_permalink( $post );
+			$near      = Pagination::neighbours( (int) get_query_var( 'page' ), Pagination::post_parts( (string) $post->post_content ) );
+
+			foreach ( $near as $rel => $page ) {
+				if ( $page > 0 ) {
+					$links[ $rel ] = Pagination::post_page_url( $permalink, $page, '' !== $structure, str_ends_with( $structure, '/' ) );
+				}
+			}
+		} elseif ( is_archive() || is_home() || is_search() ) {
+			global $wp_query;
+
+			$total = $wp_query instanceof \WP_Query ? (int) $wp_query->max_num_pages : 0;
+
+			foreach ( Pagination::neighbours( (int) get_query_var( 'paged' ), $total ) as $rel => $page ) {
+				if ( $page > 0 ) {
+					$links[ $rel ] = (string) get_pagenum_link( $page, false );
+				}
+			}
+		}
+
+		foreach ( $links as $rel => $url ) {
+			printf( '<link rel="%s" href="%s">' . "\n", esc_attr( $rel ), esc_url( $url ) );
 		}
 	}
 
