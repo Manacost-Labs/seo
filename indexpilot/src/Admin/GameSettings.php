@@ -24,7 +24,7 @@ final class GameSettings {
 	 * @param Settings $settings Настройки.
 	 */
 	public static function render( Settings $settings ): void {
-		echo '<h2>' . esc_html__( 'Игры: World of Warcraft', 'indexpilot' ) . '</h2>';
+		echo '<h3 class="indexpilot-subheading">' . esc_html__( 'World of Warcraft', 'indexpilot' ) . '</h3>';
 		echo '<p class="description">' . esc_html__( 'Всё, что лежит в выбранной рубрике и вложенных в неё, плагин считает материалами о World of Warcraft: свой словарь классов, свои типы материалов, свой патч и своя разметка. Остальное — Hearthstone.', 'indexpilot' ) . '</p>';
 		echo '<table class="form-table" role="presentation">';
 

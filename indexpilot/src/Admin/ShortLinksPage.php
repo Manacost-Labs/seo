@@ -216,21 +216,43 @@ final class ShortLinksPage {
 							</select>
 						</td>
 					</tr>
+					<?php $presets = apply_filters( 'indexpilot_shortlink_utm_presets', array() ); ?>
+					<?php if ( is_array( $presets ) && array() !== $presets ) : ?>
+						<tr>
+							<th scope="row"><label for="ip-preset"><?php esc_html_e( 'Шаблон UTM', 'indexpilot' ); ?></label></th>
+							<td>
+								<select id="ip-preset">
+									<option value=""><?php esc_html_e( 'Выберите шаблон', 'indexpilot' ); ?></option>
+									<?php foreach ( $presets as $preset ) : ?>
+										<option data-source="<?php echo esc_attr( $preset['source'] ); ?>" data-medium="<?php echo esc_attr( $preset['medium'] ); ?>" data-campaign="<?php echo esc_attr( $preset['campaign'] ); ?>"><?php echo esc_html( $preset['label'] ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php esc_html_e( 'Заполняет три поля UTM ниже готовыми значениями.', 'indexpilot' ); ?></p>
+								<script>document.getElementById('ip-preset').addEventListener('change',function(){const p=this.selectedOptions[0];for(const k of ['source','medium','campaign']){document.getElementById('ip-utm_'+k).value=p.dataset[k]||'';}});</script>
+							</td>
+						</tr>
+					<?php endif; ?>
+					<tr>
+						<th scope="row"><label for="ip-utm_source"><?php esc_html_e( 'UTM: источник', 'indexpilot' ); ?></label> <?php \IndexPilot\Admin\HelpTip::render( __( 'откуда придут люди, латиницей: twitch, youtube, telegram. Можно оставить пустым.', 'indexpilot' ), __( 'метки дописываются к адресу назначения, и в Яндекс Метрике или Google Analytics видно, сколько посетителей принесла именно эта ссылка.', 'indexpilot' ) ); ?></th>
+						<td><input id="ip-utm_source" name="utm_source" type="text" class="regular-text"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ip-utm_medium"><?php esc_html_e( 'UTM: канал', 'indexpilot' ); ?></label></th>
+						<td><input id="ip-utm_medium" name="utm_medium" type="text" class="regular-text"><p class="description"><?php esc_html_e( 'Например: stream, video, post.', 'indexpilot' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ip-utm_campaign"><?php esc_html_e( 'UTM: метка кампании', 'indexpilot' ); ?></label></th>
+						<td><input id="ip-utm_campaign" name="utm_campaign" type="text" class="regular-text"><p class="description"><?php esc_html_e( 'Например: stream-20-11.', 'indexpilot' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ip-campaign"><?php esc_html_e( 'Название кампании', 'indexpilot' ); ?></label></th>
+						<td><input id="ip-campaign" name="campaign" type="text" class="regular-text"><p class="description"><?php esc_html_e( 'Для себя: по нему ссылки фильтруются в списке ниже.', 'indexpilot' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ip-expires_at"><?php esc_html_e( 'Действует до (UTC)', 'indexpilot' ); ?></label></th>
+						<td><input id="ip-expires_at" name="expires_at" type="date"><p class="description"><?php esc_html_e( 'Пусто — ссылка работает всегда.', 'indexpilot' ); ?></p></td>
+					</tr>
 				</table>
-				<p><label for="ip-utm_source"><?php esc_html_e( 'UTM: источник', 'indexpilot' ); ?></label> <input id="ip-utm_source" name="utm_source" type="text"></p>
-<p><label for="ip-utm_medium"><?php esc_html_e( 'UTM: канал', 'indexpilot' ); ?></label> <input id="ip-utm_medium" name="utm_medium" type="text"></p>
-<p><label for="ip-utm_campaign"><?php esc_html_e( 'UTM: метка кампании', 'indexpilot' ); ?></label> <input id="ip-utm_campaign" name="utm_campaign" type="text"></p>
-<p><label for="ip-campaign"><?php esc_html_e( 'Название кампании', 'indexpilot' ); ?></label> <input id="ip-campaign" name="campaign" type="text"></p>
-<p><label for="ip-expires_at"><?php esc_html_e( 'Действует до (UTC)', 'indexpilot' ); ?></label> <input id="ip-expires_at" name="expires_at" type="date"></p>
-		<?php $presets = apply_filters( 'indexpilot_shortlink_utm_presets', array() ); ?>
-		<?php if ( is_array( $presets ) && array() !== $presets ) : ?>
-<p><label for="ip-preset"><?php esc_html_e( 'Шаблон UTM', 'indexpilot' ); ?></label>
-<select id="ip-preset"><option value=""><?php esc_html_e( 'Выберите шаблон', 'indexpilot' ); ?></option>
-			<?php foreach ( $presets as $preset ) : ?>
-<option data-source="<?php echo esc_attr( $preset['source'] ); ?>" data-medium="<?php echo esc_attr( $preset['medium'] ); ?>" data-campaign="<?php echo esc_attr( $preset['campaign'] ); ?>"><?php echo esc_html( $preset['label'] ); ?></option>
-	<?php endforeach; ?></select></p>
-<script>document.getElementById('ip-preset').addEventListener('change',function(){const p=this.selectedOptions[0];for(const k of ['source','medium','campaign']){document.getElementById('ip-utm_'+k).value=p.dataset[k]||'';}});</script>
-		<?php endif; ?>
 		<?php submit_button( __( 'Создать ссылку', 'indexpilot' ) ); ?>
 			</form>
 
@@ -258,7 +280,7 @@ final class ShortLinksPage {
 				echo esc_html( sprintf( __( 'Ссылки (%d)', 'indexpilot' ), $total ) );
 				?>
 			</h2>
-			<form method="get">
+			<form method="get" class="indexpilot-filter">
 <input type="hidden" name="page" value="<?php echo esc_attr( self::SLUG ); ?>">
 <label for="ip-filter"><?php esc_html_e( 'Кампания', 'indexpilot' ); ?></label>
 <select id="ip-filter" name="campaign"><option value=""><?php esc_html_e( 'Все кампании', 'indexpilot' ); ?></option>
@@ -294,11 +316,11 @@ final class ShortLinksPage {
 								</td>
 								<td><?php echo esc_html( (string) $link['target'] ); ?>
 								<?php if ( isset( $dead[ (string) $link['target'] ] ) ) : ?>
-<br><strong class="indexpilot-dead-target" data-indexpilot-dead-target style="color:#b32d2e"><?php esc_html_e( 'Цель перестала открываться', 'indexpilot' ); ?></strong>
+<br><strong class="indexpilot-dead-target" data-indexpilot-dead-target><?php esc_html_e( 'Цель перестала открываться', 'indexpilot' ); ?></strong>
 								<?php endif; ?>
 <p><?php echo esc_html( (string) ( $link['campaign'] ?? '' ) ); ?></p>
 							<?php if ( ! empty( $link['expires_at'] ) && $link['expires_at'] < gmdate( 'Y-m-d' ) ) : ?>
-<strong><?php esc_html_e( 'Срок действия истёк', 'indexpilot' ); ?></strong>
+<strong class="indexpilot-expired"><?php esc_html_e( 'Срок действия истёк', 'indexpilot' ); ?></strong>
 							<?php endif; ?>
 <a href="
 							<?php
@@ -423,6 +445,11 @@ final class ShortLinksPage {
 			__( 'Переходы по дням за 30 дней (UTC)', 'indexpilot' ) => $days,
 			__( 'Источники за 30 дней', 'indexpilot' ) => $this->click_log->by_referrer( $link['slug'], 30 ),
 		) as $title => $rows ) {
+			if ( array() === $rows ) {
+				echo '<h3>' . esc_html( $title ) . '</h3><p class="description">' . esc_html__( 'За 30 дней переходов по этой ссылке не было.', 'indexpilot' ) . '</p>';
+				continue;
+			}
+
 			echo '<h3>' . esc_html( $title ) . '</h3><table class="widefat striped"><thead><tr><th>' . esc_html__( 'День / источник', 'indexpilot' ) . '</th><th>' . esc_html__( 'Переходы', 'indexpilot' ) . '</th></tr></thead><tbody>';
 			foreach ( $rows as $label => $hits ) {
 				echo '<tr><td>' . esc_html( '' === $label ? __( 'Прямой переход', 'indexpilot' ) : (string) $label ) . '</td><td>' . esc_html( (string) $hits ) . '</td></tr>';

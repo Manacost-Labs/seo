@@ -174,20 +174,67 @@ final class AutoRedirect {
 			return;
 		}
 
-		foreach ( $this->pending() as $post_id => $item ) {
-			echo '<div class="notice notice-warning" data-indexpilot-deleted-post="' . esc_attr( (string) $post_id ) . '"><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><p>';
-			/* translators: 1: название записи, 2: её адрес. */
-			echo esc_html( sprintf( __( 'Запись «%1$s» удалена. Её адрес %2$s теперь отвечает «не найдено». Куда вести посетителей и поисковики?', 'indexpilot' ), $item['title'], $item['url'] ) );
-			echo '</p><p>';
-			wp_nonce_field( self::ACTION );
-			echo '<input type="hidden" name="action" value="' . esc_attr( self::ACTION ) . '"><input type="hidden" name="post_id" value="' . esc_attr( (string) $post_id ) . '">';
-			echo '<label>' . esc_html__( 'Новый адрес:', 'indexpilot' ) . ' <input type="text" class="regular-text" name="target" value="' . esc_attr( $item['target'] ) . '"></label> ';
-			HelpTip::render( __( 'адрес похожей страницы или рубрики, например /gajdy/. Подставлена рубрика удалённой записи.', 'indexpilot' ), __( 'посетитель по старой ссылке попадёт на близкую страницу, а поисковик перенесёт на неё вес старой.', 'indexpilot' ) );
-			echo ' <button type="submit" class="button button-primary" name="choice" value="redirect">' . esc_html__( 'Создать редирект', 'indexpilot' ) . '</button> ';
-			echo '<button type="submit" class="button" name="choice" value="gone">' . esc_html__( 'Удалена навсегда (410)', 'indexpilot' ) . '</button> ';
-			echo '<button type="submit" class="button-link" name="choice" value="skip">' . esc_html__( 'Ничего не делать', 'indexpilot' ) . '</button>';
-			echo '</p></form></div>';
+		$pending = $this->pending();
+
+		if ( array() === $pending ) {
+			return;
 		}
+
+		$count = count( $pending );
+
+		echo '<div class="notice notice-warning indexpilot-deleted-notice">';
+
+		if ( 1 === $count ) {
+			$item = reset( $pending );
+			/* translators: 1: название записи, 2: её адрес. */
+			echo '<p>' . esc_html( sprintf( __( 'Запись «%1$s» удалена. Её адрес %2$s теперь отвечает «не найдено». Куда вести посетителей и поисковики?', 'indexpilot' ), $item['title'], \IndexPilot\Admin\ReadableUrl::of( $item['url'] ) ) ) . '</p>';
+		} else {
+			/* translators: %d: число удалённых записей. */
+			echo '<p><strong>' . esc_html( sprintf( __( 'Удалено записей: %d.', 'indexpilot' ), $count ) ) . '</strong> ' . esc_html__( 'Их адреса теперь отвечают «не найдено». Для каждой выберите, куда вести посетителей и поисковики.', 'indexpilot' ) . '</p>';
+		}
+
+		$shown = 0;
+
+		foreach ( $pending as $post_id => $item ) {
+			if ( 3 === $shown ) {
+				/* translators: %d: сколько ещё записей ждут решения. */
+				echo '<details class="indexpilot-deleted-more"><summary>' . esc_html( sprintf( __( 'Показать ещё %d', 'indexpilot' ), $count - $shown ) ) . '</summary>';
+			}
+
+			$this->notice_row( (int) $post_id, $item, $count > 1 );
+			++$shown;
+		}
+
+		if ( $shown > 3 ) {
+			echo '</details>';
+		}
+
+		echo '</div>';
+	}
+
+	/**
+	 * Строка уведомления об одной удалённой записи: своя форма с выбором действия.
+	 *
+	 * @param int                                               $post_id   Номер записи.
+	 * @param array{url: string, title: string, target: string} $item      Запись, ждущая решения.
+	 * @param bool                                              $with_name Показать название и адрес записи в строке.
+	 */
+	private function notice_row( int $post_id, array $item, bool $with_name ): void {
+		echo '<form class="indexpilot-deleted-row" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-indexpilot-deleted-post="' . esc_attr( (string) $post_id ) . '">';
+
+		if ( $with_name ) {
+			$url = \IndexPilot\Admin\ReadableUrl::of( $item['url'] );
+			echo '<p class="indexpilot-deleted-name"><strong>' . esc_html( $item['title'] ) . '</strong> <span class="indexpilot-deleted-url" title="' . esc_attr( $url ) . '">' . esc_html( $url ) . '</span></p>';
+		}
+
+		wp_nonce_field( self::ACTION );
+		echo '<input type="hidden" name="action" value="' . esc_attr( self::ACTION ) . '"><input type="hidden" name="post_id" value="' . esc_attr( (string) $post_id ) . '">';
+		echo '<p class="indexpilot-deleted-actions"><label class="indexpilot-deleted-target"><span>' . esc_html__( 'Новый адрес:', 'indexpilot' ) . '</span> <input type="text" class="regular-text" name="target" value="' . esc_attr( $item['target'] ) . '"></label> ';
+		HelpTip::render( __( 'адрес похожей страницы или рубрики, например /gajdy/. Подставлена рубрика удалённой записи.', 'indexpilot' ), __( 'посетитель по старой ссылке попадёт на близкую страницу, а поисковик перенесёт на неё вес старой.', 'indexpilot' ) );
+		echo ' <button type="submit" class="button button-primary" name="choice" value="redirect">' . esc_html__( 'Создать редирект', 'indexpilot' ) . '</button> ';
+		echo '<button type="submit" class="button" name="choice" value="gone">' . esc_html__( 'Удалена навсегда (410)', 'indexpilot' ) . '</button> ';
+		echo '<button type="submit" class="button-link" name="choice" value="skip">' . esc_html__( 'Ничего не делать', 'indexpilot' ) . '</button>';
+		echo '</p></form>';
 	}
 
 	/**

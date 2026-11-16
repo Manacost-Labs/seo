@@ -88,7 +88,7 @@ final class AuthorPanel {
 				<th scope="row"><?php esc_html_e( 'Фото', 'indexpilot' ); ?></th>
 				<td data-indexpilot-image>
 					<input type="hidden" name="indexpilot_author_image_id" value="<?php echo esc_attr( (string) $image_id ); ?>" data-indexpilot-image-id>
-					<img src="<?php echo esc_url( $image ); ?>" alt="" style="display:block;max-width:120px;height:auto;margin-bottom:8px" data-indexpilot-image-preview <?php echo '' === $image ? 'hidden' : ''; ?>>
+					<img src="<?php echo esc_url( $image ); ?>" alt="" class="indexpilot-image-preview indexpilot-image-preview-small" data-indexpilot-image-preview <?php echo '' === $image ? 'hidden' : ''; ?>>
 					<?php if ( current_user_can( 'upload_files' ) ) : ?>
 						<button type="button" class="button" data-indexpilot-image-select><?php esc_html_e( 'Выбрать фото', 'indexpilot' ); ?></button>
 						<button type="button" class="button-link" data-indexpilot-image-remove><?php esc_html_e( 'Убрать', 'indexpilot' ); ?></button>

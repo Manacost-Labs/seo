@@ -46,10 +46,27 @@
 	margin: 0 0 14px;
 }
 
+/* Подпись строчная, чтобы значок «?» стоял в одной строке с ней; поле ввода после подписи — с новой строки. */
 .indexpilot-panel .indexpilot-field > label {
-	display: block;
-	margin-bottom: 4px;
+	display: inline;
 	font-weight: 600;
+}
+
+.indexpilot-panel .indexpilot-field > label:has(input[type="checkbox"]) {
+	font-weight: 400;
+}
+
+.indexpilot-panel .indexpilot-field > input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.indexpilot-panel .indexpilot-field > textarea,
+.indexpilot-panel .indexpilot-field > select {
+	display: block;
+	box-sizing: border-box;
+	max-width: 100%;
+	margin-top: 4px;
+}
+
+.indexpilot-panel .indexpilot-field > .indexpilot-help {
+	margin-left: 6px;
 }
 
 .indexpilot-panel .indexpilot-field .description {
@@ -89,10 +106,21 @@
 
 .indexpilot-panel .indexpilot-preview-head {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	justify-content: space-between;
 	gap: 8px;
 	margin-bottom: 8px;
+}
+
+/* Значок «?» остаётся рядом с заголовком, переключатель устройств — справа (в узкой колонке переносится вниз). */
+.indexpilot-panel .indexpilot-preview-head .indexpilot-help {
+	margin-left: 0;
+}
+
+.indexpilot-panel .indexpilot-preview-head .indexpilot-devices {
+	display: inline-flex;
+	gap: 4px;
+	margin-left: auto;
 }
 
 .indexpilot-panel .indexpilot-devices .button.is-active {
@@ -439,10 +467,13 @@
 	content: attr(data-tip);
 	position: absolute;
 	top: calc(100% + 6px);
-	left: -8px;
-	z-index: 100;
+	left: var(--indexpilot-tip-left, -8px);
+	z-index: 1000;
+	box-sizing: border-box;
+	/* Скрытая подсказка не занимает места: иначе значок у правого края растягивает страницу вбок. */
+	display: none;
 	width: max-content;
-	max-width: min(340px, 70vw);
+	max-width: var(--indexpilot-tip-width, min(340px, calc(100vw - 24px)));
 	padding: 10px 12px;
 	border-radius: 4px;
 	background: #1d2327;
@@ -450,17 +481,397 @@
 	font-size: 12px;
 	font-weight: 400;
 	line-height: 1.5;
+	letter-spacing: normal;
 	text-align: left;
+	text-transform: none;
 	white-space: pre-line;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-	visibility: hidden;
-	opacity: 0;
-	transition: opacity 0.1s;
 	pointer-events: none;
 }
 
 .indexpilot-help:hover::after,
-.indexpilot-help:focus::after {
-	visibility: visible;
-	opacity: 1;
+.indexpilot-help:focus::after,
+.indexpilot-help:focus-visible::after {
+	display: block;
+}
+
+/* У нижнего края окна подсказка открывается вверх (класс ставит admin.js). */
+.indexpilot-help.is-above::after {
+	top: auto;
+	bottom: calc(100% + 6px);
+}
+
+/* Значок в заголовке строки не переносится отдельно от подписи. */
+.form-table th .indexpilot-help {
+	margin-left: 2px;
+}
+
+/* ==========================================================================
+   Экраны плагина (body.indexpilot-screen) и общие элементы админки.
+   ========================================================================== */
+
+/* Вкладки группы экранов (Контент, Переходы, Техника) */
+.indexpilot-group-tabs {
+	margin-bottom: 0;
+}
+
+/* Широкая таблица прокручивается сама, страница остаётся на месте (обёртку ставит admin.js). */
+.indexpilot-table-scroll {
+	/* relative: скрытые подписи для экранных читалок внутри таблицы остаются в обёртке и не растягивают страницу. */
+	position: relative;
+	clear: both;
+	max-width: 100%;
+	margin: 8px 0 16px;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.indexpilot-table-scroll > table.widefat {
+	margin: 0;
+}
+
+/* Длинные адреса и слова переносятся внутри ячейки, а не раздвигают таблицу. */
+.indexpilot-screen .widefat td,
+.indexpilot-panel .widefat td {
+	overflow-wrap: anywhere;
+}
+
+.indexpilot-screen .widefat td code,
+.indexpilot-panel .widefat td code {
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
+.indexpilot-screen .widefat th {
+	overflow-wrap: normal;
+}
+
+/* Контрольные вопросы ассистентам: вопрос виден целиком, поля заполняют свои колонки. */
+.indexpilot-screen table[data-indexpilot-questions] th:nth-child(2) {
+	width: 40%;
+}
+
+.indexpilot-screen table[data-indexpilot-questions] th:nth-child(4) {
+	width: 25%;
+}
+
+.indexpilot-screen table[data-indexpilot-questions] td input[type="text"] {
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 12em;
+}
+
+/* Выпадающий список в таблице не обрезает выбранный вариант под стрелкой. */
+.indexpilot-screen .widefat select {
+	min-width: 8.5em;
+}
+
+.indexpilot-screen .wrap > h2,
+.indexpilot-screen .wrap form > h2 {
+	margin-top: 1.6em;
+}
+
+.indexpilot-screen .description {
+	max-width: 70em;
+}
+
+/* Поля ввода не вылезают за край колонки. */
+.indexpilot-screen .wrap input[type="text"],
+.indexpilot-screen .wrap input[type="url"],
+.indexpilot-screen .wrap input[type="search"],
+.indexpilot-screen .wrap input[type="number"],
+.indexpilot-screen .wrap select,
+.indexpilot-screen .wrap textarea {
+	max-width: 100%;
+}
+
+/* Строка фильтра над таблицей: подписи и поля ровно в ряд, на телефоне переносятся. */
+.indexpilot-filter {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	margin: 0 0 12px;
+}
+
+.indexpilot-filter input[type="search"] {
+	min-width: 0;
+}
+
+/* Число рядом с кнопкой — на одной линии с ней. */
+.indexpilot-count {
+	display: inline-block;
+	min-width: 1.5em;
+	margin-right: 6px;
+	font-weight: 600;
+	line-height: 30px;
+	vertical-align: middle;
+}
+
+.indexpilot-dead-target {
+	color: #b32d2e;
+}
+
+.indexpilot-expired {
+	display: block;
+	color: #996800;
+}
+
+/* Пустое состояние таблицы или отчёта */
+.indexpilot-empty {
+	margin: 12px 0 20px;
+	padding: 16px 18px;
+	border: 1px dashed #c3c4c7;
+	border-radius: 4px;
+	background: #fff;
+	color: #50575e;
+}
+
+.indexpilot-empty p {
+	margin: 0.4em 0;
+}
+
+/* ---------- Страница настроек ---------- */
+
+.indexpilot-settings .indexpilot-settings-tabs {
+	margin-bottom: 8px;
+}
+
+.no-js .indexpilot-settings .indexpilot-settings-tabs {
+	display: none;
+}
+
+.js .indexpilot-settings .indexpilot-settings-section:not(.is-active) {
+	display: none;
+}
+
+/* При вкладках название раздела уже видно на вкладке; заголовок остаётся для экранных читалок. */
+.js .indexpilot-settings .indexpilot-section-title {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	border: 0;
+	white-space: nowrap;
+}
+
+.indexpilot-settings .indexpilot-subheading {
+	margin: 28px 0 4px;
+	padding-top: 18px;
+	border-top: 1px solid #dcdcde;
+	font-size: 1.15em;
+}
+
+.indexpilot-settings .indexpilot-section-title + .indexpilot-subheading {
+	margin-top: 12px;
+	padding-top: 0;
+	border-top: 0;
+}
+
+.indexpilot-settings .indexpilot-subheading + .description {
+	margin-top: 0;
+}
+
+.indexpilot-settings .indexpilot-group-heading {
+	margin: 20px 0 0;
+	font-size: 14px;
+}
+
+.indexpilot-settings .indexpilot-group-heading code,
+.indexpilot-settings .form-table th code {
+	font-size: 11px;
+	font-weight: 400;
+}
+
+.indexpilot-settings .indexpilot-flag-option {
+	display: inline-block;
+	margin: 0 24px 6px 0;
+}
+
+.indexpilot-settings .indexpilot-unknown-variable {
+	color: #b32d2e;
+}
+
+.indexpilot-settings .indexpilot-tab-alert {
+	display: inline-block;
+	min-width: 16px;
+	margin-left: 6px;
+	padding: 0 4px;
+	border-radius: 8px;
+	background: #d63638;
+	color: #fff;
+	font-size: 11px;
+	line-height: 16px;
+	text-align: center;
+	vertical-align: 1px;
+}
+
+.indexpilot-image-preview {
+	display: block;
+	max-width: 240px;
+	height: auto;
+	margin-bottom: 8px;
+}
+
+.indexpilot-image-preview[hidden] {
+	display: none;
+}
+
+.indexpilot-image-preview-small {
+	max-width: 120px;
+}
+
+/* Панель IndexPilot на экране рубрики или метки */
+.indexpilot-term-heading {
+	margin: 1.5em 0 0;
+}
+
+.indexpilot-term-serp-title {
+	margin: 0;
+	color: #1a0dab;
+	font-size: 18px;
+	overflow-wrap: anywhere;
+}
+
+.indexpilot-term-serp-description {
+	max-width: 600px;
+	margin: 0.25em 0 0;
+	color: #4d5156;
+}
+
+.indexpilot-variables-help {
+	max-width: 70em;
+	margin: 16px 0;
+	padding: 10px 14px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #fff;
+}
+
+.indexpilot-variables-help summary {
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.indexpilot-variables-help .indexpilot-variable-list code {
+	display: inline-block;
+	margin: 0 4px 4px 0;
+}
+
+/* Кнопка сохранения всегда под рукой внизу окна. */
+.indexpilot-settings .indexpilot-settings-submit {
+	position: sticky;
+	bottom: 0;
+	z-index: 5;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin-top: 24px;
+	padding: 12px 0;
+	border-top: 1px solid #dcdcde;
+	background: #f0f0f1;
+}
+
+/* ---------- Уведомление об удалённых записях ---------- */
+
+.indexpilot-deleted-notice .indexpilot-deleted-row {
+	margin: 0;
+	padding: 4px 0;
+}
+
+.indexpilot-deleted-notice .indexpilot-deleted-row + .indexpilot-deleted-row,
+.indexpilot-deleted-notice .indexpilot-deleted-more .indexpilot-deleted-row {
+	border-top: 1px solid #f0e2b8;
+}
+
+.indexpilot-deleted-notice .indexpilot-deleted-name {
+	margin: 0.4em 0 0;
+}
+
+.indexpilot-deleted-notice .indexpilot-deleted-url {
+	display: block;
+	color: #646970;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+.indexpilot-deleted-notice .indexpilot-deleted-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+}
+
+.indexpilot-deleted-notice .indexpilot-deleted-target {
+	display: inline-flex;
+	flex: 0 1 460px;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.indexpilot-deleted-notice .indexpilot-deleted-target input {
+	flex: 1 1 auto;
+	width: auto;
+	min-width: 0;
+}
+
+.indexpilot-deleted-notice .indexpilot-deleted-more summary {
+	margin: 6px 0;
+	color: #2271b1;
+	cursor: pointer;
+}
+
+/* ---------- Узкое окно (WordPress переключается на ≤782px) ---------- */
+
+@media screen and (max-width: 782px) {
+	/* WordPress увеличивает кнопки на телефоне; кнопки переменных шаблона оставляем компактными. */
+	.indexpilot-panel .indexpilot-variables .button.indexpilot-variable {
+		min-height: 30px;
+		padding: 0 8px;
+		font-size: 12px;
+		line-height: 28px;
+	}
+
+	.indexpilot-panel .indexpilot-tab {
+		padding: 8px 10px;
+	}
+
+	/* Вкладки группы экранов — одной строкой с прокруткой вбок, а не столбиком на пол-экрана. */
+	.indexpilot-group-tabs .nav-tab-wrapper {
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		border-bottom: 1px solid #c3c4c7;
+	}
+
+	.indexpilot-group-tabs .nav-tab {
+		flex: 0 0 auto;
+		margin: 8px 6px 0 0;
+		border-bottom: 0;
+		white-space: nowrap;
+	}
+
+	.indexpilot-table-scroll > table.indexpilot-wide {
+		min-width: 640px;
+	}
+
+	.indexpilot-settings .indexpilot-flag-option {
+		display: block;
+		margin: 8px 0;
+	}
+
+	/* Поле на всю ширину, но значок «?» остаётся в той же строке. */
+	.indexpilot-deleted-notice .indexpilot-deleted-target {
+		flex-basis: calc(100% - 34px);
+	}
+
+	.indexpilot-deleted-notice .indexpilot-deleted-target span {
+		flex: 0 0 auto;
+	}
 }

@@ -144,6 +144,51 @@ final class Menu {
 		add_action( 'admin_head', array( $this, 'rebuild' ), 1 );
 		add_filter( 'submenu_file', array( $this, 'highlight' ) );
 		add_action( 'all_admin_notices', array( $this, 'tabs' ), 1 );
+		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
+		add_filter( 'admin_body_class', array( $this, 'body_class' ) );
+	}
+
+	/**
+	 * Экраны, на которых нужны общие стили плагина: свои страницы плагина и чужие экраны с панелями плагина
+	 * (редактирование записи, термина, профиль). На остальных страницах админки стили не подключаются.
+	 *
+	 * @param string $hook Текущий экран админки.
+	 * @param string $page Параметр page из адреса.
+	 */
+	public static function needs_styles( string $hook, string $page ): bool {
+		return self::is_plugin_page( $page ) || in_array( $hook, array( 'post.php', 'post-new.php', 'term.php', 'profile.php', 'user-edit.php' ), true );
+	}
+
+	/**
+	 * Страница самого плагина.
+	 *
+	 * @param string $page Параметр page из адреса.
+	 */
+	public static function is_plugin_page( string $page ): bool {
+		return SettingsPage::SLUG === $page || str_starts_with( $page, SettingsPage::SLUG . '-' );
+	}
+
+	/**
+	 * Подключает общие стили и скрипт плагина (прокрутка широких таблиц, положение подсказок «?»).
+	 *
+	 * @param string $hook Текущий экран админки.
+	 */
+	public function assets( $hook ): void {
+		if ( self::needs_styles( (string) $hook, $this->page() ) ) {
+			wp_enqueue_style( 'indexpilot-panel', plugins_url( 'assets/css/panel.css', INDEXPILOT_FILE ), array(), \IndexPilot\Plugin::VERSION );
+			wp_enqueue_script( 'indexpilot-admin', plugins_url( 'assets/js/admin.js', INDEXPILOT_FILE ), array(), \IndexPilot\Plugin::VERSION, true );
+		}
+	}
+
+	/**
+	 * Помечает страницы плагина классом body: по нему стили выравнивают таблицы, отступы и поля только у себя.
+	 *
+	 * @param string $classes Классы body через пробел.
+	 */
+	public function body_class( $classes ): string {
+		$classes = (string) $classes;
+
+		return self::is_plugin_page( $this->page() ) ? $classes . ' indexpilot-screen' : $classes;
 	}
 
 	/**
@@ -192,7 +237,7 @@ final class Menu {
 			return;
 		}
 
-		echo '<div class="wrap" style="margin-bottom:0"><nav class="nav-tab-wrapper">';
+		echo '<div class="wrap indexpilot-group-tabs"><nav class="nav-tab-wrapper" aria-label="' . esc_attr__( 'Экраны раздела', 'indexpilot' ) . '">';
 
 		foreach ( $this->menu['tabs'][ $page ] as $tab ) {
 			printf(

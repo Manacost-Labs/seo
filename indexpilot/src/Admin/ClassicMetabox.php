@@ -375,9 +375,18 @@ final class ClassicMetabox {
 					</p>
 				<?php endif; ?>
 				<p class="indexpilot-field">
-					<label for="indexpilot_canonical"><?php esc_html_e( 'Главный адрес материала', 'indexpilot' ); ?></label> <?php HelpTip::render( __( 'обычно ничего. Заполняйте, только если эта страница — копия или старая версия другой, и в поиске должна быть та, другая: впишите её полный адрес.', 'indexpilot' ), __( 'когда один текст лежит по двум адресам, поисковик сам выбирает, какой показывать, и может выбрать не тот. Этим полем вы указываете главный. Внимание: страница с чужим главным адресом из поиска пропадёт.', 'indexpilot' ) ); ?>
+					<label for="indexpilot_canonical"><?php esc_html_e( 'Основная версия страницы для поисковиков (не редирект)', 'indexpilot' ); ?></label> <?php HelpTip::render( __( 'обычно ничего. Заполняйте, только если эта страница — копия или старая версия другой, и в поиске должна быть та, другая: впишите её полный адрес. Пусто или адрес этой же записи — ничего не меняется.', 'indexpilot' ), __( 'это только подсказка поисковикам, какую из страниц-дублей показывать. Посетителя поле никуда не перебрасывает: он по-прежнему видит эту страницу. Чтобы переводить посетителей на другой адрес, нужен редирект (IndexPilot → Техника → Редиректы). Внимание: страница с чужим адресом в этом поле из поиска пропадёт.', 'indexpilot' ) ); ?>
 					<input type="url" id="indexpilot_canonical" name="indexpilot_canonical" class="large-text" value="<?php echo esc_attr( $value( MetaKeys::CANONICAL ) ); ?>" placeholder="<?php echo esc_attr( (string) get_permalink( $post ) ); ?>">
-					<span class="description"><?php esc_html_e( 'Обычно пусто. В поисковых системах это называется canonical.', 'indexpilot' ); ?></span>
+					<span class="description">
+						<?php esc_html_e( 'Обычно пусто. Посетителей не перенаправляет — только подсказывает поисковикам, какая из страниц-дублей основная (в поисковых системах это называется canonical). Пусто или адрес этой записи — ничего не меняется.', 'indexpilot' ); ?>
+						<?php
+						printf(
+							/* translators: %s: ссылка на экран редиректов. */
+							esc_html__( 'Чтобы переводить посетителей на другую страницу, создайте %s.', 'indexpilot' ),
+							'<a href="' . esc_url( admin_url( 'admin.php?page=' . RedirectsPage::SLUG ) ) . '">' . esc_html__( 'редирект в разделе «Техника → Редиректы»', 'indexpilot' ) . '</a>'
+						);
+						?>
+					</span>
 				</p>
 				<p class="indexpilot-field">
 					<label><input type="checkbox" name="indexpilot_noindex" value="1" <?php checked( (bool) $value( MetaKeys::NOINDEX ) ); ?>> <?php esc_html_e( 'Не показывать эту страницу в поиске', 'indexpilot' ); ?></label> <?php HelpTip::render( __( 'отметьте для служебных, временных и пустых страниц: правила конкурса, черновой список, страница «спасибо».', 'indexpilot' ), __( 'такие страницы ничего не дают в поиске и отнимают у поисковика время на обход сайта. Обычную статью отмечать нельзя — она исчезнет из Google и Яндекса. В поисковых системах это называется noindex.', 'indexpilot' ) ); ?>
