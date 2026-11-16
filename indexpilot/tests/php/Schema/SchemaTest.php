@@ -123,6 +123,16 @@ final class SchemaTest extends TestCase {
 		self::assertSame( array( 'Article', 'BreadcrumbList', 'ImageObject', 'ImageObject', 'Organization', 'Person', 'WebPage', 'WebSite' ), $types );
 	}
 
+	public function test_article_without_person_author_is_authored_by_the_site(): void {
+		$page = $this->article_page();
+		unset( $page['article']['author'] );
+
+		$graph = ( new GraphBuilder() )->build( $page );
+
+		self::assertSame( $graph->first( 'Organization' )['@id'], $graph->first( 'Article' )['author']['@id'], 'У колоды нет автора-человека.' );
+		self::assertSame( array(), $graph->dangling() );
+	}
+
 	public function test_article_is_linked_to_page_author_and_publisher(): void {
 		$graph   = ( new GraphBuilder() )->build( $this->article_page() );
 		$article = $graph->first( 'Article' );

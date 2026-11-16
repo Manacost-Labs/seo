@@ -259,7 +259,8 @@ final class GraphBuilder {
 				'inLanguage'       => $language,
 				'mainEntityOfPage' => array( '@id' => IdFactory::part( $url, 'webpage' ) ),
 				'isPartOf'         => array( '@id' => IdFactory::part( $url, 'webpage' ) ),
-				'author'           => '' !== $author_id ? array( '@id' => $author_id ) : null,
+				// Без автора-человека (у колод автора нет) автором считается сайт: Google принимает организацию.
+				'author'           => array( '@id' => '' !== $author_id ? $author_id : IdFactory::organization( $home ) ),
 				'publisher'        => array( '@id' => IdFactory::organization( $home ) ),
 				'image'            => '' !== $image_id ? array( '@id' => $image_id ) : null,
 				'datePublished'    => (string) ( $data['published'] ?? '' ),
