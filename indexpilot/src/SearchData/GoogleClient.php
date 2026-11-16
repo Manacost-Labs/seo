@@ -75,6 +75,35 @@ final class GoogleClient {
 			throw new SearchDataException( 'Не удалось получить данные Google' );}
 		return $data;
 	}
+	/**
+	 * Проверка адреса в индексе Google (URL Inspection API).
+	 *
+	 * @param string $site_url Ресурс в Search Console.
+	 * @param string $url      Проверяемый адрес.
+	 * @return array<string, mixed> Ответ API.
+	 */
+	public function inspect( string $site_url, string $url ): array {
+		return $this->send(
+			'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect',
+			array(
+				'Authorization' => 'Bearer ' . $this->token(),
+				'Content-Type'  => 'application/json',
+			),
+			(string) json_encode(
+				array(
+					'inspectionUrl' => $url,
+					'siteUrl'       => $site_url,
+					'languageCode'  => 'ru',
+				)
+			)
+		);
+	}
+	/**
+	 * Адрес служебной учётной записи.
+	 */
+	public function email(): string {
+		return (string) $this->key['client_email'];
+	}
 	public function query( string $site_url, string $start, string $end, array $dimensions = array( 'page', 'query' ), int $row_limit = 25000, int $start_row = 0 ): array {
 		$data   = $this->send(
 			'https://www.googleapis.com/webmasters/v3/sites/' . rawurlencode( $site_url ) . '/searchAnalytics/query',
