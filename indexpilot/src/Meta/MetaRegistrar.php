@@ -181,7 +181,9 @@ final class MetaRegistrar {
 			return;
 		}
 
-		$value = maybe_unserialize( $meta_value );
+		// Хуки меты передают значение до сериализации. Разбирать строку как сериализованную нельзя:
+		// в SEO-заголовок можно записать строку вида O:8:"stdClass":0:{}, и PHP создал бы из неё объект.
+		$value = $meta_value;
 
 		if ( '' === $value || '0' === $value || 0 === $value || false === $value || array() === $value ) {
 			delete_metadata( $object_type, $object_id, $meta_key );

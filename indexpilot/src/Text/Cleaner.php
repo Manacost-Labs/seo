@@ -26,6 +26,10 @@ final class Cleaner {
 			'#<(script|style|pre|code|noscript|iframe|svg|form|nav|figcaption)\b[^>]*>.*?</\1>#isu' => ' ',
 			// Комментарии, включая разметку блоков Gutenberg.
 			'/<!--.*?-->/su' => ' ',
+			// Закрытые части (Locker, платный доступ): текст внутри замка не должен попасть в описание, llms.txt и REST.
+			'#\[([a-z0-9_\-]*(?:lock|paywall|premium|members|restrict|boosty)[a-z0-9_\-]*)\b[^\]]*\].*?\[/\1\]#isu' => ' ',
+			// Замок без закрывающего тега закрывает всё, что после него.
+			'#\[[a-z0-9_\-]*(?:lock|paywall|premium|members|restrict|boosty)[a-z0-9_\-]*\b[^\]/]*\].*$#isu' => ' ',
 			// Теги шорткодов; текст между открывающим и закрывающим тегом остаётся.
 			'/\[\/?[a-zA-Z][a-zA-Z0-9_\-]*(?:\s[^\]]*)?\/?\]/u' => ' ',
 		);

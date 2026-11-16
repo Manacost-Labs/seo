@@ -16,3 +16,6 @@ indexpilot/tests/smoke/admin-result.json
 *.log
 .DS_Store
 Thumbs.db
+
+# Рабочие копии исполнителей
+.claude/worktrees/

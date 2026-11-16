@@ -56,4 +56,18 @@ final class TextTest extends TestCase {
 		self::assertSame( 'chernoknizhnik', Transliterator::slugify( 'Чернокнижник' ) );
 		self::assertSame( 'blood-dk', Transliterator::slugify( 'Blood DK' ) );
 	}
+
+	public function test_text_behind_a_lock_never_reaches_the_plain_text(): void {
+		$closed = Cleaner::to_plain_text( '<p>Открытое начало.</p>[locker id="5"]<p>Секретный муллиган.</p>[/locker]<p>Открытый конец.</p>' );
+		self::assertStringContainsString( 'Открытое начало.', $closed );
+		self::assertStringContainsString( 'Открытый конец.', $closed );
+		self::assertStringNotContainsString( 'Секретный', $closed );
+
+		$unclosed = Cleaner::to_plain_text( '<p>Вступление.</p>[boosty_paywall]<p>Платный разбор матчапов.</p>' );
+		self::assertStringContainsString( 'Вступление.', $unclosed );
+		self::assertStringNotContainsString( 'Платный', $unclosed );
+
+		// Обычные шорткоды по-прежнему оставляют свой текст.
+		self::assertStringContainsString( 'Подсказка', Cleaner::to_plain_text( '[su_note]Подсказка[/su_note]' ) );
+	}
 }
