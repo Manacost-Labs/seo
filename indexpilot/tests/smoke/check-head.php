@@ -274,8 +274,9 @@ $modified         = $property( $post_html, 'article:modified_time' );
 $principles = array(
 	// 1. Страница встраивания остаётся закрытой от индексации.
 	'embed page is noindex'                        => 200 === $embed['status'] && 1 === count( $embed['robots'] ) && str_contains( $embed['robots'][0], 'noindex' ) && ! preg_match( '/(^|, )index/', $embed['robots'][0] ),
-	// 4. Текст title экранирован один раз.
-	'title is escaped once'                        => str_contains( $search['html'], '<title>Поиск: a&amp;b — Manacost</title>' ) && ! str_contains( $search['html'], '&amp;amp;' ),
+	// 4. Текст title экранирован один раз. Смотрится только <head>: поле поиска в теле страницы выводит блок
+	// темы (в WordPress 6.9 он сам экранирует значение дважды), к плагину оно не относится.
+	'title is escaped once'                        => str_contains( $search['html'], '<title>Поиск: a&amp;b — Manacost</title>' ) && ! str_contains( strstr( $search['html'], '</head>', true ) ?: $search['html'], '&amp;amp;' ),
 	// 5. Время изменения не раньше времени публикации, одно и то же в тегах.
 	'modified time is not before published time'   => '' !== $published && strtotime( $modified ) >= strtotime( $published ),
 	'og:updated_time equals article:modified_time' => '' !== $modified && $modified === $property( $post_html, 'og:updated_time' ),
