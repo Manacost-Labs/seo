@@ -10,7 +10,8 @@ declare( strict_types=1 );
 namespace IndexPilot\Redirects;
 
 /**
- * Собирает редиректы плагина Redirection и результаты проверки целей в один резолвер цепочек.
+ * Собирает свои редиректы, редиректы плагина Redirection (пока он включён) и результаты проверки целей
+ * в один резолвер цепочек. Свои правила срабатывают первыми, поэтому при совпадении адресов учитывается своё.
  */
 final class RedirectService {
 
@@ -22,16 +23,25 @@ final class RedirectService {
 	private ?ChainResolver $resolver = null;
 
 	/**
+	 * Свои правила в виде редиректов.
+	 *
+	 * @var list<Redirect>|null
+	 */
+	private ?array $own_redirects = null;
+
+	/**
 	 * Конструктор.
 	 *
 	 * @param RedirectionAdapter $adapter   Редиректы плагина Redirection.
 	 * @param TargetChecker      $targets   Результаты проверки целей.
 	 * @param string             $home_host Хост этого сайта.
+	 * @param Store|null         $own       Свои правила.
 	 */
 	public function __construct(
 		private RedirectionAdapter $adapter,
 		private TargetChecker $targets,
-		private string $home_host
+		private string $home_host,
+		private ?Store $own = null
 	) {
 	}
 
@@ -39,7 +49,7 @@ final class RedirectService {
 	 * Есть ли на сайте редиректы, за которыми можно следить.
 	 */
 	public function available(): bool {
-		return $this->adapter->available();
+		return $this->adapter->available() || array() !== $this->own();
 	}
 
 	/**
@@ -48,7 +58,66 @@ final class RedirectService {
 	 * @return list<Redirect>
 	 */
 	public function all(): array {
+		$own  = $this->own();
+		$keys = array();
+
+		foreach ( $own as $redirect ) {
+			$keys[ Matcher::key( $redirect->source ) ] = true;
+		}
+
+		$foreign = array_filter( $this->adapter->all(), static fn( Redirect $redirect ): bool => ! isset( $keys[ Matcher::key( $redirect->source ) ] ) );
+
+		return array_merge( $own, array_values( $foreign ) );
+	}
+
+	/**
+	 * Свои включённые правила с точным адресом и целью.
+	 *
+	 * @return list<Redirect>
+	 */
+	public function own(): array {
+		if ( null === $this->own_redirects ) {
+			$this->own_redirects = array();
+
+			foreach ( null === $this->own ? array() : $this->own->all() as $rule ) {
+				if ( ! empty( $rule['enabled'] ) && empty( $rule['regex'] ) && '' !== (string) $rule['target'] ) {
+					$this->own_redirects[] = new Redirect( (int) $rule['id'], (string) $rule['source'], (string) $rule['target'], (int) $rule['code'], (int) $rule['hits'] );
+				}
+			}
+		}
+
+		return $this->own_redirects;
+	}
+
+	/**
+	 * Включённые правила плагина Redirection.
+	 *
+	 * @return list<Redirect>
+	 */
+	public function foreign(): array {
 		return $this->adapter->all();
+	}
+
+	/**
+	 * Ключи адресов (Matcher::key()), для которых есть включённое правило в Redirection.
+	 *
+	 * @return array<string, true>
+	 */
+	public function foreign_keys(): array {
+		$keys = array();
+
+		foreach ( $this->adapter->all() as $redirect ) {
+			$keys[ Matcher::key( $redirect->source ) ] = true;
+		}
+
+		return $keys;
+	}
+
+	/**
+	 * Редиректы плагина Redirection.
+	 */
+	public function adapter(): RedirectionAdapter {
+		return $this->adapter;
 	}
 
 	/**

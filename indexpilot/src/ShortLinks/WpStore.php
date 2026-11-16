@@ -120,9 +120,12 @@ final class WpStore implements Store {
 	 * @param ?string $campaign Фильтр кампании.
 	 * @return list<array<string, mixed>>
 	 */
-	public function all( int $limit, int $offset, ?string $campaign = null ): array {
+	public function all( int $limit, int $offset, ?string $campaign = null, ?string $search = null ): array {
+		$search = trim( (string) $search );
+		$like   = '%' . $this->db->esc_like( $search ) . '%';
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- список в админке по собственной таблице.
-		$rows = $this->db->get_results( $this->db->prepare( 'SELECT id, slug, target, code, campaign, expires_at, clicks, created, last_click FROM %i WHERE (%s = %s OR campaign = %s) ORDER BY id DESC LIMIT %d OFFSET %d', $this->table(), null === $campaign ? 'all' : 'filter', 'all', $campaign ?? '', $limit, $offset ), ARRAY_A );
+		$rows = $this->db->get_results( $this->db->prepare( 'SELECT id, slug, target, code, campaign, expires_at, clicks, created, last_click FROM %i WHERE (%s = %s OR campaign = %s) AND (%s = %s OR slug LIKE %s OR target LIKE %s) ORDER BY id DESC LIMIT %d OFFSET %d', $this->table(), null === $campaign ? 'all' : 'filter', 'all', $campaign ?? '', $search, '', $like, $like, $limit, $offset ), ARRAY_A );
 
 		return array_map(
 			static fn( array $row ): array => self::typed( $row ) + array(

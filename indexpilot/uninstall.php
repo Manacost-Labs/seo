@@ -69,3 +69,19 @@ wp_clear_scheduled_hook( 'indexpilot_indexnow_send' );
 delete_post_meta_by_key( '_indexpilot_sponsored' );
 delete_post_meta_by_key( '_indexpilot_videos' );
 delete_option( 'indexpilot_link_depth' );
+// Свои редиректы, журнал 404, самопроверка и проверка внешних адресов.
+delete_option( 'indexpilot_redirects_db_version' );
+delete_option( 'indexpilot_redirect_index' );
+delete_option( 'indexpilot_health_db_version' );
+delete_option( 'indexpilot_health_self_check' );
+delete_option( 'indexpilot_health_self_check_urls' );
+delete_option( 'indexpilot_health_outbound_collect' );
+delete_metadata( 'user', 0, '_indexpilot_deleted_posts', '', true );
+wp_clear_scheduled_hook( 'indexpilot_health_weekly' );
+wp_clear_scheduled_hook( 'indexpilot_health_batch' );
+wp_clear_scheduled_hook( 'indexpilot_outbound_daily' );
+wp_clear_scheduled_hook( 'indexpilot_outbound_batch' );
+foreach ( array( 'indexpilot_redirects', 'indexpilot_404', 'indexpilot_health' ) as $indexpilot_table ) {
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- удаление собственной таблицы плагина по явной настройке.
+	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $wpdb->prefix . $indexpilot_table ) );
+}

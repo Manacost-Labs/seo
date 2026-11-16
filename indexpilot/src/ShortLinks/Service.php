@@ -116,6 +116,34 @@ final class Service {
 	}
 
 	/**
+	 * Создаёт ссылки пачкой: одна строка — «адрес» или «адрес код». Пустые строки пропускаются.
+	 *
+	 * @param string $text     Строки.
+	 * @param int    $code     Код перенаправления.
+	 * @param string $campaign Название кампании.
+	 * @return list<array{line: string, result: array<string, mixed>|string}>
+	 */
+	public function create_many( string $text, int $code = 302, string $campaign = '' ): array {
+		$results = array();
+
+		foreach ( (array) preg_split( '/\r\n|\r|\n/', $text ) as $line ) {
+			$line = trim( (string) $line );
+
+			if ( '' === $line ) {
+				continue;
+			}
+
+			$parts     = (array) preg_split( '/[\s,;]+/', $line );
+			$results[] = array(
+				'line'   => $line,
+				'result' => $this->create( (string) $parts[0], (string) ( $parts[1] ?? '' ), $code, array(), $campaign ),
+			);
+		}
+
+		return $results;
+	}
+
+	/**
 	 * Адрес и код перенаправления по коду ссылки; null — такой ссылки нет.
 	 *
 	 * @param string $slug Код из адреса.

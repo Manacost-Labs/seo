@@ -13,11 +13,21 @@ use PHPUnit\Framework\TestCase;
 final class ShortLinksTest extends TestCase {
 
 	public function test_utm_preserves_query_and_fragment(): void {
-		self::assertSame( 'https://site.test/?x=1&utm_source=old&utm_medium=social#part', Service::append_utm( 'https://site.test/?x=1&utm_source=old#part', array( 'source' => 'new', 'medium' => 'social', 'campaign' => '' ) ) );
+		self::assertSame(
+			'https://site.test/?x=1&utm_source=old&utm_medium=social#part',
+			Service::append_utm(
+				'https://site.test/?x=1&utm_source=old#part',
+				array(
+					'source'   => 'new',
+					'medium'   => 'social',
+					'campaign' => '',
+				)
+			)
+		);
 	}
 
 	public function test_robot_does_not_increment(): void {
-		$store = new ArrayShortLinkStore();
+		$store   = new ArrayShortLinkStore();
 		$service = $this->service( $store );
 		$service->create( 'https://site.test/', 'robot-test' );
 		$service->hit( 'robot-test', 'Googlebot' );
@@ -25,9 +35,9 @@ final class ShortLinksTest extends TestCase {
 	}
 
 	public function test_campaign_expiry_and_target_edit(): void {
-		$store = new ArrayShortLinkStore();
+		$store   = new ArrayShortLinkStore();
 		$service = $this->service( $store );
-		$link = $service->create( 'https://site.test/', 'campaign-test', 302, array(), 'Новости', '2000-01-01' );
+		$link    = $service->create( 'https://site.test/', 'campaign-test', 302, array(), 'Новости', '2000-01-01' );
 		self::assertSame( 'Новости', $store->find( 'campaign-test' )['campaign'] );
 		self::assertCount( 1, $store->all( 100, 0, 'Новости' ) );
 		self::assertSame( array(), $store->all( 100, 0, 'Другая' ) );
@@ -39,8 +49,8 @@ final class ShortLinksTest extends TestCase {
 	}
 
 	public function test_human_robot_and_post_click_log(): void {
-		$store = new ArrayShortLinkStore();
-		$log = new \IndexPilot\Tests\Support\ArrayClickLog();
+		$store   = new ArrayShortLinkStore();
+		$log     = new \IndexPilot\Tests\Support\ArrayClickLog();
 		$service = new Service( $store, static fn( int $id ): string => 5 === $id ? 'https://site.test/post' : '', $log );
 		$service->create( 'https://site.test/', 'human-test' );
 		$service->hit( 'human-test', 'Mozilla/5.0', 'https://Example.test/private?secret=yes' );
@@ -142,7 +152,7 @@ final class ShortLinksTest extends TestCase {
 	}
 
 	public function test_expiry_boundary_and_invalid_input(): void {
-		$store = new ArrayShortLinkStore();
+		$store   = new ArrayShortLinkStore();
 		$service = $this->service( $store );
 		self::assertIsArray( $service->create( 'https://site.test/', 'today-link', 302, array(), 'Campaign', gmdate( 'Y-m-d' ) ) );
 		self::assertNotNull( $service->resolve( 'today-link' ) );

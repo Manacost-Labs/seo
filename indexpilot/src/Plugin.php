@@ -50,6 +50,8 @@ use IndexPilot\Frontend\SchemaOutput;
 use IndexPilot\Frontend\Verification;
 use IndexPilot\Game\Lexicon;
 use IndexPilot\Game\Module as GameModule;
+use IndexPilot\Health\Module as HealthModule;
+use IndexPilot\Health\WpStore as HealthStore;
 use IndexPilot\IndexNow\Key as IndexNowKey;
 use IndexPilot\IndexNow\Notifier;
 use IndexPilot\IndexNow\Queue as IndexNowQueue;
@@ -72,7 +74,13 @@ use IndexPilot\Llms\Output as LlmsOutput;
 use IndexPilot\Meta\MetaRegistrar;
 use IndexPilot\Overview\Facts as OverviewFacts;
 use IndexPilot\Promo\Module as PromoModule;
+use IndexPilot\Redirects\AutoRedirect;
+use IndexPilot\Redirects\Handler as RedirectHandler;
+use IndexPilot\Redirects\Manager as RedirectManager;
 use IndexPilot\Redirects\RedirectedPosts;
+use IndexPilot\Redirects\Schema as RedirectSchema;
+use IndexPilot\Redirects\WpNotFoundStore;
+use IndexPilot\Redirects\WpStore as RedirectStore;
 use IndexPilot\Redirects\RedirectionAdapter;
 use IndexPilot\Redirects\RedirectService;
 use IndexPilot\Redirects\TargetChecker;
@@ -207,6 +215,13 @@ final class Plugin {
 	private ?PromoModule $promo = null;
 
 	/**
+	 * Самопроверка сайта.
+	 *
+	 * @var HealthModule|null
+	 */
+	private ?HealthModule $health = null;
+
+	/**
 	 * Запускает плагин один раз.
 	 */
 	public static function boot(): void {
@@ -250,6 +265,9 @@ final class Plugin {
 					( new TermPanel( $this->resolver() ) )->register();
 					( new PostListColumns( $this->resolver(), $this->redirected_posts() ) )->register();
 					( new RedirectsReport( $this->redirects(), $this->redirected_posts() ) )->register();
+					( new \IndexPilot\Admin\RedirectsPage( $this->redirect_store(), array( $this, 'redirect_manager' ), $this->redirects(), $this->not_found_store() ) )->register();
+					( new \IndexPilot\Admin\NotFoundPage( $this->not_found_store(), $this->db() ) )->register();
+					( new \IndexPilot\Admin\HealthPage( $this->health() ) )->register();
 					( new LinksReport( $this->link_scanner(), $this->link_reports() ) )->register();
 					( new \IndexPilot\Admin\Reports\ImagesReport() )->register();
 					( new SettingsPage( $this->settings(), $this->site_defaults(), $this->variables() ) )->register();
@@ -262,7 +280,8 @@ final class Plugin {
 					if ( $this->settings()->general( 'shortlinks_enabled' ) ) {
 						global $wpdb;
 
-						( new ShortLinksPage( $this->shortlinks(), new ShortLinkStore( $wpdb ), $this->shortlink_router(), new ShortLinkClickLog( $wpdb ) ) )->register();
+						( new ShortLinksPage( $this->shortlinks(), new ShortLinkStore( $wpdb ), $this->shortlink_router(), new ShortLinkClickLog( $wpdb ), $this->health()->store() ) )->register();
+						( new \IndexPilot\Admin\ShortLinkActions( $this->shortlink_router() ) )->register();
 					}
 					( new AuditReport( $this->audit() ) )->register();
 
@@ -280,6 +299,14 @@ final class Plugin {
 			( new ClassicMetabox( $this->resolver(), $this->settings(), $this->variables() ) )->register();
 		}
 
+		// Свои редиректы: правило ищется на самом раннем хуке по индексу из опции с автозагрузкой —
+		// на обычной странице запросов к базе нет. Журнал 404 пишется только на ответе 404.
+		( new RedirectHandler( $this->db() ) )->register();
+		( new AutoRedirect( array( $this, 'redirect_manager' ) ) )->register();
+
+		// Самопроверка сайта и проверка внешних адресов: только по расписанию и по кнопке в админке.
+		$this->health()->register();
+
 		// Граф ссылок: таблица создаётся при первом запуске, ссылки записи пересчитываются при её сохранении.
 		add_action(
 			'init',
@@ -287,6 +314,8 @@ final class Plugin {
 				global $wpdb;
 
 				LinkSchema::maybe_install( $wpdb );
+				RedirectSchema::maybe_install( $wpdb );
+				HealthStore::maybe_install( $wpdb );
 				$this->link_scanner()->register();
 				$this->audit()->register();
 			},
@@ -325,6 +354,10 @@ final class Plugin {
 				( new AnalyzeController( $this->resolver(), $this->papers(), $this->analyzer() ) )->register();
 				( new ImportController( $this->import_sources(), $this->importer(), new ImportState() ) )->register();
 				( new RedirectsController( $this->redirects() ) )->register();
+
+				if ( $this->settings()->general( 'shortlinks_enabled' ) ) {
+					( new \IndexPilot\Rest\ShortLinksController( $this->shortlinks(), new ShortLinkStore( $this->db() ), $this->shortlink_router() ) )->register();
+				}
 				( new AuditController( $this->audit() ) )->register();
 				( new IndexNowController( $this->indexnow(), $this->sitemap() ) )->register();
 				( new RestField( $this->resolver() ) )->register();
@@ -537,11 +570,53 @@ final class Plugin {
 			$this->redirects = new RedirectService(
 				new RedirectionAdapter( $wpdb ),
 				new TargetChecker(),
-				(string) wp_parse_url( home_url(), PHP_URL_HOST )
+				(string) wp_parse_url( home_url(), PHP_URL_HOST ),
+				$this->redirect_store()
 			);
 		}
 
 		return $this->redirects;
+	}
+
+	/**
+	 * База данных WordPress.
+	 */
+	public function db(): \wpdb {
+		global $wpdb;
+
+		return $wpdb;
+	}
+
+	/**
+	 * Свои правила редиректов.
+	 */
+	public function redirect_store(): RedirectStore {
+		return new RedirectStore( $this->db() );
+	}
+
+	/**
+	 * Самопроверка сайта и проверка внешних адресов.
+	 */
+	public function health(): HealthModule {
+		if ( null === $this->health ) {
+			$this->health = new HealthModule( $this );
+		}
+
+		return $this->health;
+	}
+
+	/**
+	 * Журнал 404.
+	 */
+	public function not_found_store(): WpNotFoundStore {
+		return new WpNotFoundStore( $this->db() );
+	}
+
+	/**
+	 * Менеджер своих редиректов. Действующие правила Redirection участвуют в схлопывании цепочек.
+	 */
+	public function redirect_manager(): RedirectManager {
+		return new RedirectManager( $this->redirect_store(), (string) wp_parse_url( home_url(), PHP_URL_HOST ), $this->redirects()->foreign() );
 	}
 
 	/**

@@ -23,12 +23,12 @@ final class ArrayShortLinkStore implements Store {
 	public function insert( string $slug, string $target, int $code, string $campaign = '', ?string $expires_at = null ): int {
 		$id                   = count( $this->links ) + 1;
 		$this->links[ $slug ] = array(
-			'id'     => $id,
-			'slug'   => $slug,
-			'target' => $target,
-			'code'   => $code,
-			'clicks' => 0,
-			'campaign' => $campaign,
+			'id'         => $id,
+			'slug'       => $slug,
+			'target'     => $target,
+			'code'       => $code,
+			'clicks'     => 0,
+			'campaign'   => $campaign,
 			'expires_at' => $expires_at,
 		);
 
@@ -41,8 +41,19 @@ final class ArrayShortLinkStore implements Store {
 		}
 	}
 
-	public function all( int $limit, int $offset, ?string $campaign = null ): array {
-		return array_slice( array_values( array_filter( $this->links, static fn( array $row ): bool => null === $campaign || $campaign === $row['campaign'] ) ), $offset, $limit );
+	public function all( int $limit, int $offset, ?string $campaign = null, ?string $search = null ): array {
+		$search = null === $search ? '' : mb_strtolower( $search );
+
+		return array_slice(
+			array_values(
+				array_filter(
+					$this->links,
+					static fn( array $row ): bool => ( null === $campaign || $campaign === $row['campaign'] ) && ( '' === $search || str_contains( mb_strtolower( $row['slug'] . ' ' . $row['target'] ), $search ) )
+				)
+			),
+			$offset,
+			$limit
+		);
 	}
 
 	public function count(): int {
@@ -65,7 +76,9 @@ final class ArrayShortLinkStore implements Store {
 	 */
 	public function update_target( int $id, string $target ): bool {
 		foreach ( $this->links as &$link ) {
-			if ( $id === $link['id'] ) { $link['target'] = $target; return true; }
+			if ( $id === $link['id'] ) {
+				$link['target'] = $target;
+				return true; }
 		}
 		return false;
 	}
@@ -86,7 +99,10 @@ final class ArrayShortLinkStore implements Store {
 	 * @return array<string,mixed>|null
 	 */
 	public function find_by_id( int $id ): ?array {
-		foreach ( $this->links as $link ) { if ( $id === $link['id'] ) { return $link; } }
+		foreach ( $this->links as $link ) {
+			if ( $id === $link['id'] ) {
+				return $link; }
+		}
 		return null;
 	}
 }
