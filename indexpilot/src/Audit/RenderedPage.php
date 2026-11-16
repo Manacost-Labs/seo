@@ -36,7 +36,8 @@ final class RenderedPage {
 		$scripts = preg_match_all( '#<script\b(?![^>]*type=["\']application/(?:ld\+)?json)#i', $html );
 		$main    = self::main( $html );
 		$text    = Cleaner::to_plain_text( $main, false );
-		$words   = count( preg_split( '/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY ) ?: array() );
+		$split   = preg_split( '/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY );
+		$words   = is_array( $split ) ? count( $split ) : 0;
 		$lower   = mb_strtolower( $text );
 		$missing = array();
 
