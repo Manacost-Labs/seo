@@ -10,7 +10,7 @@ declare( strict_types=1 );
 namespace IndexPilot\Analysis;
 
 use IndexPilot\Analysis\Language\Stemmer;
-use IndexPilot\Game\Lexicon;
+use IndexPilot\Game\GameLexicon;
 use IndexPilot\Text\Transliterator;
 
 /**
@@ -35,12 +35,12 @@ final class KeywordMatcher {
 	 *
 	 * @param Stemmer      $russian Стеммер для слов кириллицей.
 	 * @param Stemmer      $english Стеммер для слов латиницей.
-	 * @param Lexicon|null $lexicon Игровой словарь; null — сравниваются только формы слов.
+	 * @param GameLexicon|null $lexicon Игровой словарь; null — сравниваются только формы слов.
 	 */
 	public function __construct(
 		private Stemmer $russian,
 		private Stemmer $english,
-		private ?Lexicon $lexicon = null
+		private ?GameLexicon $lexicon = null
 	) {
 	}
 

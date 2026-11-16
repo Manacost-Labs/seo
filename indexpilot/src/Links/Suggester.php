@@ -42,9 +42,10 @@ final class Suggester {
 	 * Строит индекс заголовков.
 	 *
 	 * @param array<string, string> $titles Идентификатор страницы => заголовок.
-	 * @return array{total: int, docs: array<string, array{title: string, stems: list<string>}>, stems: array<string, int>}
+	 * @param array<string, string> $games  Идентификатор страницы => игра; без игры страница предлагается в любой игре.
+	 * @return array{total: int, docs: array<string, array{title: string, stems: list<string>, game?: string}>, stems: array<string, int>}
 	 */
-	public function build( array $titles ): array {
+	public function build( array $titles, array $games = array() ): array {
 		$docs      = array();
 		$frequency = array();
 
@@ -59,6 +60,10 @@ final class Suggester {
 				'title' => (string) $title,
 				'stems' => array_map( 'strval', $stems ),
 			);
+
+			if ( isset( $games[ $id ] ) ) {
+				$docs[ (string) $id ]['game'] = (string) $games[ $id ];
+			}
 
 			foreach ( $stems as $stem ) {
 				$frequency[ $stem ] = ( $frequency[ $stem ] ?? 0 ) + 1;
@@ -79,9 +84,10 @@ final class Suggester {
 	 * @param string               $html    Текст записи.
 	 * @param list<string>         $exclude Идентификаторы, которые предлагать не нужно.
 	 * @param int                  $limit   Сколько страниц вернуть.
+	 * @param string               $game    Игра текста: страницы других игр не предлагаются; пусто — любые.
 	 * @return list<array{id: string, title: string, score: float}>
 	 */
-	public function suggest( array $index, string $html, array $exclude = array(), int $limit = 5 ): array {
+	public function suggest( array $index, string $html, array $exclude = array(), int $limit = 5, string $game = '' ): array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- класс не зависит от WordPress и проверяется модульными тестами.
 		$text  = $this->stems( html_entity_decode( strip_tags( str_replace( '<', ' <', $html ) ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
 		$total = max( 1, (int) ( $index['total'] ?? 0 ) );
@@ -89,7 +95,7 @@ final class Suggester {
 		$found = array();
 
 		foreach ( (array) ( $index['docs'] ?? array() ) as $id => $doc ) {
-			if ( isset( $skip[ $id ] ) ) {
+			if ( isset( $skip[ $id ] ) || ( '' !== $game && isset( $doc['game'] ) && $doc['game'] !== $game ) ) {
 				continue;
 			}
 

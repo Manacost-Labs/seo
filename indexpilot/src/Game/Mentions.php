@@ -87,11 +87,11 @@ final class Mentions {
 	/**
 	 * Конструктор.
 	 *
-	 * @param Lexicon                                $lexicon    Игровой словарь: классы и их разговорные имена.
+	 * @param GameLexicon                            $lexicon    Игровой словарь: классы и их разговорные имена.
 	 * @param array<string, string>                  $class_urls Адреса страниц классов: слаг класса из словаря => адрес.
 	 * @param list<array{name: string, url: string}> $archetypes Архетипы сайта: название и адрес страницы.
 	 */
-	public function __construct( private Lexicon $lexicon, private array $class_urls = array(), private array $archetypes = array() ) {
+	public function __construct( private GameLexicon $lexicon, private array $class_urls = array(), private array $archetypes = array() ) {
 		$this->stemmer = new RussianStemmer();
 	}
 

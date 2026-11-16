@@ -22,6 +22,19 @@ final class Patch {
 	public const TRACKED = array( MaterialType::GUIDE, MaterialType::MULLIGAN, MaterialType::MATCHUPS, MaterialType::DECK );
 
 	/**
+	 * Материалы World of Warcraft, которые нужно обновлять после патча: гайды, тактики, маршруты, профессии,
+	 * прокачка и золото.
+	 */
+	public const TRACKED_WOW = array( WowMaterialType::GUIDE, WowMaterialType::BOSS, WowMaterialType::DUNGEON, WowMaterialType::PROFESSIONS, WowMaterialType::LEVELLING, WowMaterialType::GOLD );
+
+	/**
+	 * Типы материалов, за которыми следит этот патч.
+	 *
+	 * @var list<string>
+	 */
+	private array $watched;
+
+	/**
 	 * Номер патча.
 	 *
 	 * @var string
@@ -39,11 +52,13 @@ final class Patch {
 	 * Конструктор.
 	 *
 	 * @param string $version Номер патча, например 37.0.
-	 * @param string $date    Дата выхода: ГГГГ-ММ-ДД или ДД.ММ.ГГГГ.
+	 * @param string       $date    Дата выхода: ГГГГ-ММ-ДД или ДД.ММ.ГГГГ.
+	 * @param list<string> $watched Типы материалов, которые устаревают после патча; по умолчанию — Hearthstone.
 	 */
-	public function __construct( string $version, string $date ) {
+	public function __construct( string $version, string $date, array $watched = self::TRACKED ) {
 		$this->version = trim( $version );
 		$this->date    = self::normalize_date( $date );
+		$this->watched = $watched;
 	}
 
 	/**
@@ -71,7 +86,7 @@ final class Patch {
 	public function outdated( string $material, string $modified ): bool {
 		$day = substr( trim( $modified ), 0, 10 );
 
-		return $this->active() && self::tracked( $material ) && '' !== $day && $day < $this->date;
+		return $this->active() && in_array( $material, $this->watched, true ) && '' !== $day && $day < $this->date;
 	}
 
 	/**
@@ -81,7 +96,7 @@ final class Patch {
 	 * @param string $modified Дата изменения.
 	 */
 	public function current( string $material, string $modified ): bool {
-		return $this->active() && self::tracked( $material ) && '' !== trim( $modified ) && ! $this->outdated( $material, $modified );
+		return $this->active() && in_array( $material, $this->watched, true ) && '' !== trim( $modified ) && ! $this->outdated( $material, $modified );
 	}
 
 	/**

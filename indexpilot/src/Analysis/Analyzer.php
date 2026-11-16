@@ -13,6 +13,7 @@ use IndexPilot\Analysis\Checks\AnchorChecks;
 use IndexPilot\Analysis\Checks\AnswerChecks;
 use IndexPilot\Analysis\Checks\CitationChecks;
 use IndexPilot\Analysis\Checks\ContentChecks;
+use IndexPilot\Analysis\Checks\GameChecks;
 use IndexPilot\Analysis\Checks\ImageChecks;
 use IndexPilot\Analysis\Checks\KeywordChecks;
 use IndexPilot\Analysis\Checks\MaterialChecks;
@@ -50,10 +51,11 @@ final class Analyzer {
 	 *
 	 * @param list<CheckGroup>|null $groups  Группы проверок; null — стандартный набор.
 	 * @param KeywordMatcher|null   $matcher Поиск ключа; null — русский и английский стеммеры и встроенный игровой словарь.
+	 * @param \Closure|null         $matchers Поиск ключа для игры записи: fn( string $game ): ?KeywordMatcher; null — один словарь на все игры.
 	 */
-	public function __construct( ?array $groups = null, ?KeywordMatcher $matcher = null ) {
+	public function __construct( ?array $groups = null, ?KeywordMatcher $matcher = null, private ?\Closure $matchers = null ) {
 		$this->matcher = $matcher ?? new KeywordMatcher( new RussianStemmer(), new EnglishStemmer(), new Lexicon() );
-		$this->groups  = $groups ?? array( new KeywordChecks(), new SnippetChecks(), new ContentChecks(), new ImageChecks(), new AnchorChecks(), new SponsoredChecks(), new VideoChecks(), new AnswerChecks(), new MaterialChecks(), new ReadabilityChecks(), new CitationChecks() );
+		$this->groups  = $groups ?? array( new KeywordChecks(), new SnippetChecks(), new ContentChecks(), new ImageChecks(), new AnchorChecks(), new SponsoredChecks(), new VideoChecks(), new AnswerChecks(), new MaterialChecks(), new ReadabilityChecks(), new CitationChecks(), new GameChecks() );
 	}
 
 	/**
@@ -62,12 +64,14 @@ final class Analyzer {
 	 * @param Paper $paper Данные страницы.
 	 */
 	public function analyze( Paper $paper ): Report {
-		$facts       = new Facts( $paper, $this->matcher );
+		// Запись о World of Warcraft сравнивается словарём своей игры: «шп» там — жрец тьмы.
+		$matcher     = ( '' !== $paper->game && null !== $this->matchers ? ( $this->matchers )( $paper->game ) : null ) ?? $this->matcher;
+		$facts       = new Facts( $paper, $matcher );
 		$results     = array();
 		$readability = null;
 
 		foreach ( $this->groups as $group ) {
-			foreach ( $group->run( $paper, $facts, $this->matcher ) as $result ) {
+			foreach ( $group->run( $paper, $facts, $matcher ) as $result ) {
 				$results[] = $result;
 
 				// Оценка читаемости есть, только если текст оценивался: у колод и пустых записей её нет.
@@ -77,10 +81,11 @@ final class Analyzer {
 			}
 		}
 
+		$types    = class_exists( $paper->material_types ) ? $paper->material_types : MaterialType::class;
 		$material = '' !== $paper->material
 			? array(
 				'type'  => $paper->material,
-				'label' => MaterialType::label( $paper->material ),
+				'label' => $types::label( $paper->material ),
 			)
 			: null;
 
