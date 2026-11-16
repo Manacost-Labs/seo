@@ -9,7 +9,7 @@ namespace IndexPilot\Game;
 
 use IndexPilot\Analysis\Language\RussianStemmer;
 /** Сопоставляет игровые названия и словоформы. */
-final class Lexicon {
+final class Lexicon implements GameLexicon {
 	/** @var array Названия классов. */
 	private const NAMES = array(
 		'death-knight' => 'Рыцарь смерти',
