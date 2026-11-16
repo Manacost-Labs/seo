@@ -30,6 +30,20 @@ final class MenuTest extends TestCase {
 		);
 	}
 
+	public function test_styles_load_only_on_plugin_screens_and_screens_with_its_panels(): void {
+		self::assertTrue( Menu::needs_styles( 'toplevel_page_indexpilot', 'indexpilot' ) );
+		self::assertTrue( Menu::needs_styles( 'indexpilot_page_indexpilot-health', 'indexpilot-health' ) );
+		self::assertTrue( Menu::needs_styles( 'post.php', '' ) );
+		self::assertTrue( Menu::needs_styles( 'term.php', '' ) );
+		self::assertTrue( Menu::needs_styles( 'profile.php', '' ) );
+
+		self::assertFalse( Menu::needs_styles( 'index.php', '' ) );
+		self::assertFalse( Menu::needs_styles( 'edit.php', '' ) );
+		self::assertFalse( Menu::needs_styles( 'options-general.php', '' ) );
+		self::assertFalse( Menu::needs_styles( 'settings_page_indexpilotx', 'indexpilotx' ) );
+		self::assertFalse( Menu::is_plugin_page( 'other-indexpilot' ) );
+	}
+
 	public function test_eleven_screens_become_six_menu_items_in_working_order(): void {
 		$menu = Menu::arrange( $this->items(), static fn( string $cap ): bool => true );
 

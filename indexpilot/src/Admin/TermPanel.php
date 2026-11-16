@@ -68,14 +68,14 @@ final class TermPanel {
 		?>
 		<tr class="form-field">
 			<th scope="row" colspan="2">
-				<h2 style="margin:1.5em 0 0;"><?php esc_html_e( 'IndexPilot: SEO страницы', 'indexpilot' ); ?></h2>
+				<h2 class="indexpilot-term-heading"><?php esc_html_e( 'IndexPilot: SEO страницы', 'indexpilot' ); ?></h2>
 			</th>
 		</tr>
 		<tr class="form-field">
 			<th scope="row"><?php esc_html_e( 'Сейчас в поиске', 'indexpilot' ); ?></th>
 			<td>
-				<p style="font-size:18px;color:#1a0dab;margin:0;"><?php echo esc_html( $resolved->title ); ?></p>
-				<p style="color:#4d5156;margin:.25em 0 0;max-width:600px;">
+				<p class="indexpilot-term-serp-title"><?php echo esc_html( $resolved->title ); ?></p>
+				<p class="indexpilot-term-serp-description">
 					<?php echo '' !== $resolved->description ? esc_html( $resolved->description ) : esc_html__( 'Описания нет.', 'indexpilot' ); ?>
 				</p>
 				<p class="description">
@@ -92,7 +92,7 @@ final class TermPanel {
 		$title_help = sprintf( __( 'Пусто — заголовок соберётся по шаблону таксономии. Можно использовать переменные: %s.', 'indexpilot' ), '%term%, %sep%, %sitename%' );
 		$this->text_row( $term, 'indexpilot_title', __( 'SEO-заголовок', 'indexpilot' ), $title_help );
 		$this->textarea_row( $term, 'indexpilot_description', __( 'Метаописание', 'indexpilot' ), __( 'Рекомендуемая длина — 120–155 символов. Пусто — возьмётся описание термина.', 'indexpilot' ) );
-		$this->text_row( $term, 'indexpilot_focus_keyword', __( 'Focus Keyword', 'indexpilot' ), __( 'Главный запрос, по которому должна находиться эта страница.', 'indexpilot' ) );
+		$this->text_row( $term, 'indexpilot_focus_keyword', __( 'Главный запрос', 'indexpilot' ), __( 'Фраза, по которой эта страница должна находиться в поиске, например «колоды жреца».', 'indexpilot' ) );
 		$this->editor_row( $term, 'indexpilot_intro', __( 'Текст над списком записей', 'indexpilot' ), __( 'Вступление: о чём раздел и что в нём найдёт читатель. Показывается на первой странице.', 'indexpilot' ) );
 		$this->editor_row( $term, 'indexpilot_outro', __( 'Текст под списком записей', 'indexpilot' ), __( 'Подробный текст раздела. Показывается на первой странице.', 'indexpilot' ) );
 		?>
@@ -101,7 +101,7 @@ final class TermPanel {
 			<td>
 				<label for="indexpilot_noindex">
 					<input type="checkbox" id="indexpilot_noindex" name="indexpilot_noindex" value="1" <?php checked( (bool) get_term_meta( $term->term_id, MetaKeys::NOINDEX, true ) ); ?>>
-					<?php esc_html_e( 'Закрыть страницу от индексации (noindex)', 'indexpilot' ); ?>
+					<?php esc_html_e( 'Не показывать эту страницу в поиске (noindex)', 'indexpilot' ); ?>
 				</label>
 			</td>
 		</tr>

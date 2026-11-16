@@ -210,7 +210,7 @@ final class SearchEnginesPage {
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Ждут отправки', 'indexpilot' ); ?></th>
 				<td>
-					<span data-indexpilot-queue><?php echo esc_html( number_format_i18n( $queue ) ); ?></span>
+					<span class="indexpilot-count" data-indexpilot-queue><?php echo esc_html( number_format_i18n( $queue ) ); ?></span>
 					<button type="button" class="button" data-indexpilot-indexnow="send_queue" <?php disabled( ! $enabled || 0 === $queue ); ?>><?php esc_html_e( 'Отправить сейчас', 'indexpilot' ); ?></button>
 					<p class="description"><?php esc_html_e( 'Обычно очередь уходит сама в течение минуты после сохранения записи.', 'indexpilot' ); ?></p>
 				</td>
@@ -264,7 +264,7 @@ final class SearchEnginesPage {
 							}
 							?>
 						</td>
-						<td><?php echo esc_html( $entry['sample'] ); ?></td>
+						<td><?php echo esc_html( ReadableUrl::of( (string) $entry['sample'] ) ); ?></td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>

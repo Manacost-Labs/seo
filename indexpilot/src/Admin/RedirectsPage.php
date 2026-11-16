@@ -401,7 +401,7 @@ final class RedirectsPage {
 
 		$export = wp_nonce_url( add_query_arg( 'export', '1', admin_url( 'admin.php?page=' . self::SLUG ) ), self::NONCE . '_export' );
 
-		echo '<form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin.php?page=' . self::SLUG ) ) . '"><p>';
+		echo '<form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin.php?page=' . self::SLUG ) ) . '"><p class="indexpilot-filter">';
 		wp_nonce_field( self::NONCE );
 		echo '<input type="hidden" name="indexpilot_redirect_action" value="import_csv">';
 		echo '<a class="button" href="' . esc_url( $export ) . '">' . esc_html__( 'Выгрузить в CSV', 'indexpilot' ) . '</a> ';

@@ -446,6 +446,11 @@ final class HeadInspector {
 			echo '<p><strong>' . esc_html( sprintf( __( 'Тегов не от IndexPilot: %d. Их выводит тема или другой плагин — уберите их там, чтобы не было двух версий.', 'indexpilot' ), count( $report['foreign'] ) ) ) . '</strong></p>';
 		}
 
+		if ( array() === $report['tags'] ) {
+			echo '<p class="indexpilot-empty">' . esc_html__( 'В коде страницы не найдено ни одного SEO-тега: ни заголовка, ни описания, ни разметки. Проверьте, что адрес открывается и тема выводит wp_head().', 'indexpilot' ) . '</p>';
+			return;
+		}
+
 		echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Тег', 'indexpilot' ) . '</th><th>' . esc_html__( 'Значение', 'indexpilot' ) . '</th><th>' . esc_html__( 'Источник', 'indexpilot' ) . '</th></tr></thead><tbody>';
 
 		foreach ( $report['tags'] as $tag ) {
