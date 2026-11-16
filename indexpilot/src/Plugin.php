@@ -338,6 +338,8 @@ final class Plugin {
 				$this->author_box()->register();
 				// Сводка автора и отметка «Проверил»: пересчёт при сохранении записи, шорткод сводки.
 				( new \IndexPilot\Authors\AuthorPages( new AuthorProfile(), $this->lexicon() ) )->register();
+				// Страницы стримеров (deck_streamer): поля термина в админке.
+				( new \IndexPilot\Game\StreamerPage() )->register();
 
 				// Блоки из панели записи: краткий ответ, вопросы и ответы, факты и цитаты.
 				( new AnswerBlock( $this->settings() ) )->register();
@@ -502,6 +504,7 @@ final class Plugin {
 					// Закрытые части записи: обёртка с классом и пометка платного содержимого в разметке.
 					( new \IndexPilot\Schema\Paywall() )->register();
 					( new \IndexPilot\Authors\AuthorPages( new AuthorProfile(), $this->lexicon() ) )->register_front();
+					( new \IndexPilot\Game\StreamerPage() )->register_front();
 				}
 			}
 		);

@@ -59,6 +59,11 @@ final class SiteDefaults {
 					'title'                => 'Колоды: %term% %sep% Hearthstone %sep% %page% %sep% %sitename%',
 					'fallback_description' => 'Колоды Hearthstone, класс %term%: актуальные сборки с кодами и списками карт на сайте %sitename%.',
 				),
+				// Страницы стримеров и игроков (hs-manacost.ru): у игроков нет учётной записи на сайте.
+				'deck_streamer'  => array(
+					'title'                => 'Колоды %term% для Hearthstone %sep% %page% %sep% %sitename%',
+					'fallback_description' => 'Колоды %term% для Hearthstone: актуальные сборки игрока с кодами и списками карт на сайте %sitename%.',
+				),
 				'deck_mode'      => array(
 					'title'                => 'Колоды Hearthstone: %term% %sep% %page% %sep% %sitename%',
 					'fallback_description' => 'Колоды Hearthstone, режим %term%: актуальные сборки с кодами и списками карт на сайте %sitename%.',

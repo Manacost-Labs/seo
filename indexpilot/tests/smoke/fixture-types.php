@@ -19,6 +19,7 @@ add_action(
 		register_taxonomy( 'deck_class', 'hs_deck', array( 'public' => true, 'label' => 'Класс', 'rewrite' => array( 'slug' => 'deck-class' ) ) );
 		register_taxonomy( 'deck_mode', 'hs_deck', array( 'public' => true, 'label' => 'Режим', 'rewrite' => array( 'slug' => 'deck-mode' ) ) );
 		register_taxonomy( 'deck_archetype', 'hs_deck', array( 'public' => true, 'label' => 'Архетип', 'rewrite' => array( 'slug' => 'archetype' ) ) );
+		register_taxonomy( 'deck_streamer', 'hs_deck', array( 'public' => true, 'label' => 'Стример', 'rewrite' => array( 'slug' => 'streamer' ) ) );
 	}
 );
 
