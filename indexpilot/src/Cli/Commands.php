@@ -159,6 +159,13 @@ final class Commands {
 			$this->free_memory();
 		} while ( ! $result['done'] );
 
+		// Закрытые от индексации виды страниц (метки, авторы, даты, поиск) AIOSEO хранит в общих настройках.
+		if ( 'aioseo' === $source->id() ) {
+			foreach ( \IndexPilot\Import\AioseoSettings::apply( $dry_run ) as $section => $names ) {
+				\WP_CLI::log( sprintf( 'Закрыто от индексации (%s): %s', $section, implode( ', ', $names ) ) );
+			}
+		}
+
 		\WP_CLI::success(
 			sprintf(
 				'%s: обработано строк — %d, записей с переносом — %d, полей — %d, пропущено — %d.',

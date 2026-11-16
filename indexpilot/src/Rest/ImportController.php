@@ -105,6 +105,11 @@ final class ImportController {
 		$result = $this->importer->run( $source, $state['last_id'], self::BATCH, false, (bool) $request['overwrite'] );
 		$state  = $this->state->add( $source->id(), $result );
 
+		// Закрытые от индексации виды страниц AIOSEO хранит в общих настройках: переносятся в конце импорта.
+		if ( $result['done'] && 'aioseo' === $source->id() ) {
+			\IndexPilot\Import\AioseoSettings::apply();
+		}
+
 		return rest_ensure_response(
 			array(
 				'done'  => $result['done'],
