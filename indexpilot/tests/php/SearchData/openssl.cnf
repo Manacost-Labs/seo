@@ -1,0 +1,2 @@
+openssl_conf = init
+[init]
