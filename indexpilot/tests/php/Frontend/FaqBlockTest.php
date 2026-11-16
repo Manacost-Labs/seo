@@ -74,8 +74,8 @@ final class FaqBlockTest extends TestCase {
 		);
 
 		self::assertStringContainsString( '<section class="indexpilot-faq"', $html );
-		self::assertStringContainsString( '<h2>Вопросы и ответы</h2>', $html );
-		self::assertStringContainsString( '<h3>Подходит ли &lt;колода&gt; новичку?</h3>', $html );
+		self::assertStringContainsString( '>Вопросы и ответы</p>', $html, 'Заголовок блока — скромная подпись, а не H2 размером с раздел статьи.' );
+		self::assertStringContainsString( '<details class="indexpilot-spoiler indexpilot-faq-item"><summary><h3>Подходит ли &lt;колода&gt; новичку?</h3></summary>', $html );
 		self::assertStringContainsString( "<p>Да.<br>\nПлан игры простой.</p>", $html );
 		self::assertStringNotContainsString( '<script', $html );
 		self::assertSame( '', FaqBlock::html( array(), 'Вопросы и ответы' ) );

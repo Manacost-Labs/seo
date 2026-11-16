@@ -122,7 +122,7 @@ use IndexPilot\Variables\VariableRegistry;
  */
 final class Plugin {
 
-	public const VERSION = '1.0.0-rc6';
+	public const VERSION = '1.0.0-rc7';
 
 	/**
 	 * Единственный экземпляр.
@@ -505,6 +505,8 @@ final class Plugin {
 		// Черновик с адресом опубликованной записи не превращает её страницу в 404. Работает и рядом с другим SEO-плагином.
 		if ( ! is_admin() ) {
 			( new \IndexPilot\Compat\PublishedFirst() )->register();
+			// Карты «[hs_card]» в кратком ответе и вопросах: подсказки всплывают, даже если в тексте записи карт нет.
+			( new \IndexPilot\Compat\CardTooltips() )->register();
 		}
 
 		// Теги печатаются только на страницах сайта и только если их не выводит другой SEO-плагин.

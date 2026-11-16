@@ -69,6 +69,7 @@ json_check searchdata-check.php
 json_check wow-check.php
 json_check doctor-check.php
 json_check twins-check.php
+json_check cards-check.php
 json_check wave7-check.php
 
 # Карта сайта, robots.txt и файл ключа проверяются последними: к этому моменту есть записи с noindex, под паролем и под редиректом.

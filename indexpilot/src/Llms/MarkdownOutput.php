@@ -147,7 +147,7 @@ final class MarkdownOutput {
 
 		$text = Markdown::document(
 			html_entity_decode( wp_strip_all_tags( get_the_title( $post ) ), ENT_QUOTES, 'UTF-8' ),
-			AnswerBlock::answer( (int) $post->ID ),
+			\IndexPilot\Text\InlineShortcodes::plain( AnswerBlock::answer( (int) $post->ID ) ),
 			$this->html( $post ),
 			/* translators: %s: адрес статьи. */
 			sprintf( __( 'Источник: %s', 'indexpilot' ), $this->canonical( $post ) )

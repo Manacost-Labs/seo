@@ -239,7 +239,7 @@ final class MetaResolver {
 			return '';
 		}
 
-		return Cleaner::to_plain_text( $this->custom( $context, MetaKeys::ANSWER, 'answer' ), false );
+		return Cleaner::to_plain_text( \IndexPilot\Text\InlineShortcodes::plain( $this->custom( $context, MetaKeys::ANSWER, 'answer' ) ), false );
 	}
 
 	/**

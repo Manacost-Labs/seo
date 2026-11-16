@@ -19,7 +19,7 @@ final class AnswerBlockTest extends TestCase {
 		$content = '<figure><img src="a.png" alt=""><figcaption><p>Подпись</p></figcaption></figure>' . "\n" . '<p>Первый абзац.</p>' . "\n" . '<h2>Раздел</h2><p>Второй абзац.</p>';
 		$result  = AnswerBlock::insert( $content, $this->block() );
 
-		self::assertSame( 1, substr_count( $result, 'class="indexpilot-answer"' ) );
+		self::assertSame( 1, substr_count( $result, 'class="indexpilot-spoiler indexpilot-answer"' ) );
 		self::assertLessThan( strpos( $result, '<p>Первый абзац.</p>' ), strpos( $result, 'indexpilot-answer' ) );
 		// Абзац внутри подписи к картинке первым абзацем статьи не считается.
 		self::assertGreaterThan( strpos( $result, '</figure>' ), strpos( $result, 'indexpilot-answer' ) );
@@ -32,19 +32,20 @@ final class AnswerBlockTest extends TestCase {
 		$content = '<p>Вступление.</p>' . $this->block() . '<p>Текст.</p>' . $this->block();
 		$result  = AnswerBlock::insert( $content, $this->block() );
 
-		self::assertSame( 1, substr_count( $result, 'class="indexpilot-answer"' ) );
-		self::assertStringStartsWith( '<p>Вступление.</p><div class="indexpilot-answer"', $result );
+		self::assertSame( 1, substr_count( $result, 'class="indexpilot-spoiler indexpilot-answer"' ) );
+		self::assertStringStartsWith( '<p>Вступление.</p><details class="indexpilot-spoiler indexpilot-answer"', $result );
 	}
 
 	public function test_text_without_paragraphs_gets_the_block_at_the_start(): void {
-		self::assertStringStartsWith( '<div class="indexpilot-answer"', AnswerBlock::insert( 'Просто строка без разметки', $this->block() ) );
+		self::assertStringStartsWith( '<details class="indexpilot-spoiler indexpilot-answer"', AnswerBlock::insert( 'Просто строка без разметки', $this->block() ) );
 		self::assertSame( '<p>Текст.</p>', AnswerBlock::insert( '<p>Текст.</p>', '' ) );
 	}
 
 	public function test_block_shows_heading_answer_and_visible_update_date(): void {
 		$html = $this->block();
 
-		self::assertStringContainsString( '<strong>Коротко</strong>', $html );
+		self::assertStringContainsString( '<summary>Коротко</summary>', $html, 'Блок — спойлер: «Коротко» в шапке.' );
+		self::assertStringNotContainsString( ' open', $html, 'Спойлер свёрнут.' );
 		self::assertStringContainsString( self::ANSWER, $html );
 		self::assertStringContainsString( 'Обновлено <time datetime="2026-11-15T10:00:00+03:00">15.11.2026</time>', $html );
 		self::assertStringNotContainsString( '<script', $html );

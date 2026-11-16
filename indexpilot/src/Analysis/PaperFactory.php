@@ -205,7 +205,8 @@ final class PaperFactory {
 
 		$answer = $context->override( 'answer' );
 
-		return trim( is_string( $answer ) ? $answer : (string) get_post_meta( $context->object_id, MetaKeys::ANSWER, true ) );
+		// Карты в ответе — шорткодом «[hs_card …]Название[/hs_card]»: анализ видит только название.
+		return \IndexPilot\Text\InlineShortcodes::plain( trim( is_string( $answer ) ? $answer : (string) get_post_meta( $context->object_id, MetaKeys::ANSWER, true ) ) );
 	}
 
 	/**

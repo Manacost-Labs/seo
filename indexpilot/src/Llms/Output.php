@@ -127,7 +127,7 @@ final class Output {
 					'title'       => get_the_title( $post ),
 					'url'         => (string) get_permalink( $post ),
 					// Краткий ответ из панели записи — готовое самостоятельное описание страницы; он идёт целиком.
-					'description' => LlmsTxt::summary( (string) get_post_meta( $post->ID, MetaKeys::ANSWER, true ), $meta->description ),
+					'description' => LlmsTxt::summary( \IndexPilot\Text\InlineShortcodes::plain( (string) get_post_meta( $post->ID, MetaKeys::ANSWER, true ) ), $meta->description ),
 				);
 			}
 		}
@@ -283,7 +283,7 @@ final class Output {
 				$links[] = array(
 					'title'       => get_the_title( $post ),
 					'url'         => (string) get_permalink( $post ),
-					'description' => LlmsTxt::summary( (string) get_post_meta( $post->ID, MetaKeys::ANSWER, true ), $meta->description ),
+					'description' => LlmsTxt::summary( \IndexPilot\Text\InlineShortcodes::plain( (string) get_post_meta( $post->ID, MetaKeys::ANSWER, true ) ), $meta->description ),
 				);
 			}
 

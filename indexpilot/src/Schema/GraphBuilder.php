@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Schema;
 
+use IndexPilot\Text\InlineShortcodes;
 /**
  * Собирает узлы WebSite, Organization, WebPage (или CollectionPage), BreadcrumbList, Article, Person, ImageObject, FAQPage, VideoObject
  * из готовых данных страницы. Данные из WordPress собирает PageData.
@@ -310,8 +311,9 @@ final class GraphBuilder {
 		$questions = array();
 
 		foreach ( $items as $item ) {
-			$question = is_array( $item ) ? self::line( (string) ( $item['question'] ?? '' ) ) : '';
-			$answer   = is_array( $item ) ? self::line( (string) ( $item['answer'] ?? '' ) ) : '';
+			// В разметке — только текст: от «[hs_card …]Чарокрыл[/hs_card]» остаётся название карты.
+			$question = is_array( $item ) ? self::line( InlineShortcodes::plain( (string) ( $item['question'] ?? '' ) ) ) : '';
+			$answer   = is_array( $item ) ? self::line( InlineShortcodes::plain( (string) ( $item['answer'] ?? '' ) ) ) : '';
 
 			if ( '' !== $question && '' !== $answer ) {
 				$questions[] = array(

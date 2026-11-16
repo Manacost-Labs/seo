@@ -15,6 +15,7 @@ use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Resolver\PostDates;
 use IndexPilot\Promo\Blocks;
 use IndexPilot\Settings\Settings;
+use IndexPilot\Text\InlineShortcodes;
 
 /**
  * Показывает в начале статьи краткий ответ из панели записи и дату обновления. Читатель сразу видит суть,
@@ -35,9 +36,9 @@ final class AnswerBlock {
 	private const MARKER = 'indexpilot-answer';
 
 	/**
-	 * Блок целиком. Вложенных div в нём нет, поэтому первый закрывающий тег — его конец.
+	 * Блок целиком. Вложенных details в нём нет, поэтому первый закрывающий тег — его конец.
 	 */
-	private const BLOCK_PATTERN = '#<div class="indexpilot-answer"[^>]*>.*?</div>#su';
+	private const BLOCK_PATTERN = '#<details class="indexpilot-spoiler indexpilot-answer"[^>]*>.*?</details>#su';
 
 	/**
 	 * Теги без закрывающей пары: вложенность не меняют.
@@ -82,8 +83,9 @@ final class AnswerBlock {
 	 * @param string $updated  Подпись даты: «Обновлено».
 	 * @param string $date     Дата обновления в том виде, в каком её видит читатель.
 	 * @param string $datetime Та же дата в машинном виде.
+	 * @param callable( string ): string|null $shortcode Выполнение шорткода (do_shortcode): карты в ответе становятся подсказками.
 	 */
-	public static function html( string $answer, string $heading, string $updated = '', string $date = '', string $datetime = '' ): string {
+	public static function html( string $answer, string $heading, string $updated = '', string $date = '', string $datetime = '', ?callable $shortcode = null ): string {
 		$escape = static fn( string $value ): string => htmlspecialchars( $value, ENT_QUOTES, 'UTF-8' );
 		$answer = trim( (string) preg_replace( '/\s+/u', ' ', $answer ) );
 
@@ -95,18 +97,18 @@ final class AnswerBlock {
 
 		if ( '' !== $date ) {
 			$stamp = sprintf(
-				'<p class="indexpilot-answer-date" style="margin:.6em 0 0;font-size:.85em;opacity:.75">%s<time datetime="%s">%s</time></p>',
+				'<p class="indexpilot-answer-date" style="font-size:.85em;opacity:.7">%s<time datetime="%s">%s</time></p>',
 				'' !== $updated ? $escape( $updated ) . ' ' : '',
 				$escape( '' !== $datetime ? $datetime : $date ),
 				$escape( $date )
 			);
 		}
 
-		return sprintf(
-			'<div class="indexpilot-answer" style="margin:0 0 1.5em;padding:1em 1.25em;border:1px solid rgba(128,128,128,.45);border-left:4px solid currentColor;border-radius:8px"><p style="margin:0 0 .4em"><strong>%1$s</strong></p><p class="indexpilot-answer-text" style="margin:0">%2$s</p>%3$s</div>',
+		// Спойлер в стиле сайта: свёрнут, текст в HTML и виден поисковикам.
+		return Spoiler::html(
+			self::MARKER,
 			$escape( $heading ),
-			$escape( $answer ),
-			$stamp
+			'<p class="indexpilot-answer-text">' . InlineShortcodes::html( $answer, $shortcode ) . '</p>' . $stamp
 		);
 	}
 
@@ -118,7 +120,7 @@ final class AnswerBlock {
 	 * @param string $block   HTML блока.
 	 */
 	public static function insert( string $content, string $block ): string {
-		if ( str_contains( $content, 'class="' . self::MARKER . '"' ) ) {
+		if ( str_contains( $content, 'class="indexpilot-spoiler ' . self::MARKER . '"' ) ) {
 			$seen = 0;
 
 			return (string) preg_replace_callback(
@@ -179,6 +181,8 @@ final class AnswerBlock {
 	 */
 	public function register(): void {
 		add_shortcode( self::SHORTCODE, fn(): string => $this->render( (int) get_the_ID() ) );
+		// Стиль спойлера — в head (один раз, даже если подключён обоими блоками).
+		add_action( 'wp_head', array( Spoiler::class, 'print_style' ) );
 
 		// После обработки шорткодов (11) и до блоков перехода (20): «первый абзац» — это абзац самой статьи.
 		add_filter( 'the_content', array( $this, 'filter' ), 12 );
@@ -257,7 +261,8 @@ final class AnswerBlock {
 			$this->updated_label( $post_id ),
 			// Дата изменения не раньше даты публикации — та же, что в тегах и разметке (см. PostDates).
 			PostDates::modified( (string) get_option( 'date_format' ), false, $post_id, true ),
-			PostDates::modified( 'c', false, $post_id )
+			PostDates::modified( 'c', false, $post_id ),
+			'do_shortcode'
 		);
 	}
 }

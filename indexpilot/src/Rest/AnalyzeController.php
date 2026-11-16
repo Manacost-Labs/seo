@@ -180,7 +180,7 @@ final class AnalyzeController {
 	public static function blurb( Context $context, string $description ): string {
 		$answer  = $context->override( 'answer' );
 		$content = $context->override( 'content' );
-		$answer  = trim( is_string( $answer ) ? $answer : (string) get_post_meta( $context->object_id, MetaKeys::ANSWER, true ) );
+		$answer  = \IndexPilot\Text\InlineShortcodes::plain( trim( is_string( $answer ) ? $answer : (string) get_post_meta( $context->object_id, MetaKeys::ANSWER, true ) ) );
 		$link    = (string) wp_get_shortlink( $context->object_id );
 
 		return VideoBlurb::build(

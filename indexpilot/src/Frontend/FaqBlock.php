@@ -12,6 +12,7 @@ namespace IndexPilot\Frontend;
 use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Promo\Blocks;
 use IndexPilot\Settings\Settings;
+use IndexPilot\Text\InlineShortcodes;
 
 /**
  * Выводит пары «вопрос — ответ» из панели записи видимым блоком: заголовок, вопросы подзаголовками, ответы абзацами.
@@ -117,24 +118,33 @@ final class FaqBlock {
 	}
 
 	/**
-	 * HTML блока. Вопросы и ответы — обычный текст; переводы строк в ответе сохраняются.
+	 * HTML блока. Вопросы и ответы — обычный текст; переводы строк в ответе сохраняются. Шорткоды внутри
+	 * (карты «[hs_card]…[/hs_card]») выполняются, если передан $shortcode.
 	 *
-	 * @param list<array{question: string, answer: string}> $items Пары.
-	 * @param string                                        $title Заголовок блока.
+	 * @param list<array{question: string, answer: string}> $items     Пары.
+	 * @param string                                        $title     Заголовок блока.
+	 * @param callable( string ): string|null               $shortcode Выполнение шорткода (do_shortcode).
 	 */
-	public static function html( array $items, string $title ): string {
+	public static function html( array $items, string $title, ?callable $shortcode = null ): string {
 		$escape = static fn( string $value ): string => htmlspecialchars( $value, ENT_QUOTES, 'UTF-8' );
 		$body   = '';
 
+		// Каждый вопрос — спойлер в стиле сайта: вопрос в шапке, ответ раскрывается по нажатию.
 		foreach ( self::complete( $items ) as $item ) {
-			$body .= '<h3>' . $escape( $item['question'] ) . '</h3><p>' . nl2br( $escape( $item['answer'] ), false ) . '</p>';
+			$body .= Spoiler::html(
+				'indexpilot-faq-item',
+				'<h3>' . InlineShortcodes::html( $item['question'], $shortcode ) . '</h3>',
+				'<p>' . InlineShortcodes::html( $item['answer'], $shortcode ) . '</p>'
+			);
 		}
 
 		if ( '' === $body ) {
 			return '';
 		}
 
-		return '<section class="indexpilot-faq" style="margin:2em 0 1.5em">' . ( '' !== trim( $title ) ? '<h2>' . $escape( $title ) . '</h2>' : '' ) . $body . '</section>';
+		$heading = '' !== trim( $title ) ? '<p class="indexpilot-faq-title" style="margin:0 0 .6em;font-weight:700;font-size:1.05em">' . $escape( $title ) . '</p>' : '';
+
+		return '<section class="indexpilot-faq" style="margin:1.5em 0">' . $heading . $body . '</section>';
 	}
 
 	/**
@@ -167,6 +177,8 @@ final class FaqBlock {
 	 */
 	public function register(): void {
 		add_shortcode( self::SHORTCODE, fn(): string => $this->render( (int) get_the_ID() ) );
+		// Стиль спойлера — в head (один раз, даже если подключён обоими блоками).
+		add_action( 'wp_head', array( Spoiler::class, 'print_style' ) );
 
 		// После обработки шорткодов (11) и до блоков перехода (20): вопросы — часть статьи.
 		add_filter( 'the_content', array( $this, 'append' ), 12 );
@@ -209,7 +221,7 @@ final class FaqBlock {
 	 * @param int $post_id ID записи.
 	 */
 	public function render( int $post_id ): string {
-		return self::html( $this->items( $post_id ), __( 'Вопросы и ответы', 'indexpilot' ) );
+		return self::html( $this->items( $post_id ), __( 'Вопросы и ответы', 'indexpilot' ), 'do_shortcode' );
 	}
 
 	/**

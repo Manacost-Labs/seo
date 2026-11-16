@@ -302,7 +302,7 @@ $description = html_entity_decode( $description[1] ?? '', ENT_QUOTES, 'UTF-8' );
 $faq_page    = $node( 'FAQPage' );
 $article     = $node( 'NewsArticle' );
 $breadcrumbs = array_column( (array) ( $node( 'BreadcrumbList' )['itemListElement'] ?? array() ), 'name' );
-$answer_at   = strpos( $reader_page, 'class="indexpilot-answer"' );
+$answer_at   = strpos( $reader_page, 'class="indexpilot-spoiler indexpilot-answer"' );
 $first_at    = strpos( $reader_page, '<p>Первый абзац статьи про мага.</p>' );
 $faq_at      = strpos( $reader_page, '<section class="indexpilot-faq"' );
 
@@ -393,7 +393,8 @@ echo wp_json_encode(
 			'analysis_has_answer' => 'good' === ( $checks['answer'] ?? '' ),
 		),
 		'page'      => array(
-			'answer_block_once'         => false !== $answer_at && 1 === substr_count( $reader_page, 'class="indexpilot-answer"' ),
+			'spoiler_style_in_head'     => false !== strpos( $reader_page, '<style id="indexpilot-spoiler">' ) && strpos( $reader_page, '<style id="indexpilot-spoiler">' ) < strpos( $reader_page, '</head>' ) && 1 === substr_count( $reader_page, 'id="indexpilot-spoiler"' ),
+			'answer_block_once'         => false !== $answer_at && 1 === substr_count( $reader_page, 'class="indexpilot-spoiler indexpilot-answer"' ),
 			'answer_before_first_p'     => false !== $answer_at && false !== $first_at && $answer_at < $first_at,
 			'answer_has_update_date'    => 1 === preg_match( '#Обновлено <time datetime="\d{4}-\d\d-\d\dT[^"]+">\d\d\.\d\d\.\d{4}</time>#u', $reader_page ),
 			'faq_block_at_the_end'      => false !== $faq_at && $faq_at > strpos( $reader_page, 'Ещё текст.' ) && str_contains( $reader_page, '<h3>Сколько пыли стоит колода?</h3>' ),
@@ -403,7 +404,7 @@ echo wp_json_encode(
 			'editor_note_only_for_editor' => ! str_contains( $reader_page, 'indexpilot-editor-note' ) && 1 === substr_count( $editor_page, 'class="indexpilot-editor-note"' ),
 			'description_is_the_answer' => str_starts_with( $description, 'Маг на заклинаниях выигрывает темпом.' ) && mb_strlen( $description ) <= 155,
 			'article_section'           => str_contains( $reader_page, '<meta property="article:section" content="Новости">' ),
-			'no_plugin_scripts_or_styles' => 0 === preg_match( '#<(?:script|link)\b[^>]*(?:src|href)="[^"]*/plugins/indexpilot/#', $reader_page ) && ! str_contains( $reader_page, '<style id="indexpilot' ),
+			'no_plugin_scripts_or_styles' => 0 === preg_match( '#<(?:script|link)\b[^>]*(?:src|href)="[^"]*/plugins/indexpilot/#', $reader_page ) && 0 === preg_match( '#<style id="indexpilot(?!-spoiler")#', $reader_page ),
 		),
 		'schema'    => array(
 			'news_article'           => array() !== $article && 'Новости' === ( $article['articleSection'] ?? '' ),
@@ -417,7 +418,7 @@ echo wp_json_encode(
 			'other_saves_keep_fields' => $kept,
 		),
 		'shortcode' => array(
-			'answer_once_at_shortcode' => 1 === substr_count( $shortcode_page, 'class="indexpilot-answer"' ) && strpos( $shortcode_page, '<p>Вступление.</p>' ) < strpos( $shortcode_page, 'class="indexpilot-answer"' ),
+			'answer_once_at_shortcode' => 1 === substr_count( $shortcode_page, 'class="indexpilot-spoiler indexpilot-answer"' ) && strpos( $shortcode_page, '<p>Вступление.</p>' ) < strpos( $shortcode_page, 'class="indexpilot-spoiler indexpilot-answer"' ),
 			'faq_once_at_shortcode'    => 1 === substr_count( $shortcode_page, '<section class="indexpilot-faq"' ) && strpos( $shortcode_page, '<section class="indexpilot-faq"' ) < strpos( $shortcode_page, 'Первый абзац статьи про мага.' ) && str_contains( $shortcode_page, '"FAQPage"' ),
 		),
 		'llms'      => array(
