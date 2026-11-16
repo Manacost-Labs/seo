@@ -26,6 +26,31 @@ final class ShortLinksTest extends TestCase {
 		);
 	}
 
+	public function test_links_have_owner_and_only_admin_changes_others(): void {
+		$store  = new ArrayShortLinkStore();
+		$base   = $this->service( $store );
+		$editor = $base->acting_as( 7, false );
+		$other  = $base->acting_as( 8, false );
+		$admin  = $base->acting_as( 1, true );
+
+		$own = $editor->create( 'https://site.test/a', 'own-link', 301 );
+		self::assertSame( 7, $store->find( 'own-link' )['author'] );
+		// Постоянное перенаправление запоминается браузером навсегда: редактор получает временное.
+		self::assertSame( 302, $store->find( 'own-link' )['code'] );
+		self::assertTrue( $editor->update_target( $own['id'], 'https://site.test/b' ) );
+		self::assertIsString( $other->update_target( $own['id'], 'https://evil.test/' ) );
+		self::assertSame( 'https://site.test/b', $store->find( 'own-link' )['target'] );
+		self::assertIsString( $other->delete( $own['id'] ) );
+		self::assertNotNull( $store->find( 'own-link' ) );
+
+		$admin_link = $admin->create( 'https://site.test/c', 'admin-link', 301 );
+		self::assertSame( 301, $store->find( 'admin-link' )['code'] );
+		self::assertIsString( $editor->update_target( $admin_link['id'], 'https://evil.test/' ) );
+		self::assertTrue( $admin->update_target( $own['id'], 'https://site.test/d' ) );
+		self::assertTrue( $admin->delete( $own['id'] ) );
+		self::assertNull( $store->find( 'own-link' ) );
+	}
+
 	public function test_robot_does_not_increment(): void {
 		$store   = new ArrayShortLinkStore();
 		$service = $this->service( $store );
@@ -55,10 +80,14 @@ final class ShortLinksTest extends TestCase {
 		$service->create( 'https://site.test/', 'human-test' );
 		$service->hit( 'human-test', 'Mozilla/5.0', 'https://Example.test/private?secret=yes' );
 		self::assertSame( array( gmdate( 'Y-m-d' ) => 1 ), $log->by_day( 'human-test', 30 ) );
-		self::assertSame( array( 'example.test' => 1 ), $log->by_referrer( 'human-test', 30 ) );
+		// Неизвестный источник пишется одной строкой «other»: выдуманные Referer не множат строки журнала.
+		self::assertSame( array( 'other' => 1 ), $log->by_referrer( 'human-test', 30 ) );
+		$service->hit( 'human-test', 'Mozilla/5.0', 'https://r987654.example/' );
+		$service->hit( 'human-test', 'Mozilla/5.0', 'https://www.google.com/' );
+		self::assertSame( array( 'google.com' => 1, 'other' => 2 ), $log->by_referrer( 'human-test', 30 ) );
 		$service->hit( 'human-test', 'Googlebot', 'https://robot.test/' );
-		self::assertSame( 1, $store->find( 'human-test' )['clicks'] );
-		self::assertSame( array( 'example.test' => 1 ), $log->by_referrer( 'human-test', 30 ) );
+		self::assertSame( 3, $store->find( 'human-test' )['clicks'] );
+		self::assertSame( array( 'google.com' => 1, 'other' => 2 ), $log->by_referrer( 'human-test', 30 ) );
 		$service->hit( 'p5', 'Mozilla/5.0' );
 		self::assertSame( array( gmdate( 'Y-m-d' ) => 1 ), $log->by_day( 'p5', 30 ) );
 		self::assertNull( $store->find( 'p5' ) );

@@ -32,7 +32,7 @@ final class DeckSchema {
 		$player_id = '';
 
 		if ( '' !== $deck->player ) {
-			$player_id = IdFactory::person( $home, 'player:' . mb_strtolower( $deck->player ) );
+			$player_id = IdFactory::player( $home, $deck->player );
 
 			$graph->add(
 				array(

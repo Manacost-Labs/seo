@@ -30,6 +30,12 @@ final class CoreVariables {
 	private const PLACEHOLDERS = array( 'unknown', 'n/a', 'none', 'null', '-', '—' );
 
 	/**
+	 * Служебные поля (имя начинается с «_»), которые можно выводить через %cf_КЛЮЧ%: поля колод.
+	 * Остальные служебные поля закрыты — в них плагины держат закрытый текст и ключи.
+	 */
+	public const ALLOWED_PRIVATE_FIELDS = array( '_dust_cost', '_deck_player', '_deck_streamer', '_deck_code', '_hs_deck_code', '_deck_copies', '_deck_wins', '_deck_losses', '_deck_peak', '_hs_archetype_key' );
+
+	/**
 	 * Регистрирует переменные в реестре.
 	 *
 	 * @param VariableRegistry $registry Реестр переменных.
@@ -205,6 +211,10 @@ final class CoreVariables {
 	 * @param Context $context Контекст страницы.
 	 */
 	public function custom_field( string $key, Context $context ): string {
+		if ( ! self::field_allowed( $key ) ) {
+			return '';
+		}
+
 		$overrides = $context->override( 'cf' );
 		if ( is_array( $overrides ) && isset( $overrides[ $key ] ) && is_scalar( $overrides[ $key ] ) ) {
 			return self::plain( (string) $overrides[ $key ] );
@@ -213,6 +223,15 @@ final class CoreVariables {
 		$value = $this->meta( $context, $key );
 
 		return is_scalar( $value ) ? self::without_placeholder( self::plain( (string) $value ) ) : '';
+	}
+
+	/**
+	 * Можно ли выводить поле в заголовке и описании: обычные поля — да, служебные — только из списка.
+	 *
+	 * @param string $key Ключ меты.
+	 */
+	public static function field_allowed( string $key ): bool {
+		return '' !== $key && ( ! str_starts_with( $key, '_' ) || in_array( $key, self::ALLOWED_PRIVATE_FIELDS, true ) );
 	}
 
 	/**

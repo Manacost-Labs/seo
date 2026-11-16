@@ -30,8 +30,9 @@ interface Store {
 	 * @param int    $code   Код перенаправления.
 	 * @param string $campaign Кампания.
 	 * @param ?string $expires_at Срок действия.
+	 * @param int    $author ID пользователя, создавшего ссылку; 0 — создана системой.
 	 */
-	public function insert( string $slug, string $target, int $code, string $campaign = '', ?string $expires_at = null ): int;
+	public function insert( string $slug, string $target, int $code, string $campaign = '', ?string $expires_at = null, int $author = 0 ): int;
 
 	/**
 	 * Засчитывает переход.

@@ -60,9 +60,70 @@ final class Service {
 	 * @param Store    $store    Хранилище своих ссылок.
 	 * @param ?ClickLog $click_log Журнал переходов.
 	 * @param callable $post_url Функция: ID записи => адрес опубликованной записи или пустая строка.
+	 * @param string   $own_host Хост своего сайта: переходы с него в журнале остаются под своим именем.
 	 */
-	public function __construct( private Store $store, callable $post_url, private ?ClickLog $click_log = null ) {
+	public function __construct( private Store $store, callable $post_url, private ?ClickLog $click_log = null, private string $own_host = '' ) {
 		$this->post_url = $post_url;
+	}
+
+	/**
+	 * Кто действует: ID пользователя и администратор ли он. null — система (WP-CLI, расписание), без ограничений.
+	 *
+	 * @var array{id: int, admin: bool}|null
+	 */
+	private ?array $actor = null;
+
+	/**
+	 * Копия сервиса, действующая от имени пользователя: его ссылки получают его ID, чужие он не меняет и не удаляет.
+	 *
+	 * @param int  $user_id ID пользователя.
+	 * @param bool $admin   Администратор ли он (право manage_options).
+	 */
+	public function acting_as( int $user_id, bool $admin ): self {
+		$copy        = clone $this;
+		$copy->actor = array(
+			'id'    => $user_id,
+			'admin' => $admin,
+		);
+
+		return $copy;
+	}
+
+	/**
+	 * Может ли текущий пользователь менять и удалять ссылку: свою — да, чужую или без владельца — только администратор.
+	 *
+	 * @param array<string, mixed> $link Ссылка из хранилища.
+	 */
+	public function can_change( array $link ): bool {
+		if ( null === $this->actor || $this->actor['admin'] ) {
+			return true;
+		}
+
+		$author = (int) ( $link['author'] ?? 0 );
+
+		return $author > 0 && $author === $this->actor['id'];
+	}
+
+	/**
+	 * Удаляет свою ссылку.
+	 *
+	 * @param int $id ID ссылки.
+	 * @return bool|string true или текст ошибки.
+	 */
+	public function delete( int $id ) {
+		$link = $this->store->find_by_id( $id );
+
+		if ( null === $link ) {
+			return 'Ссылка не найдена.';
+		}
+
+		if ( ! $this->can_change( $link ) ) {
+			return 'Чужую ссылку может изменить или удалить только администратор.';
+		}
+
+		$this->store->delete( $id );
+
+		return true;
 	}
 
 	/**
@@ -95,6 +156,12 @@ final class Service {
 			return 'Код перенаправления должен быть 301, 302 или 307.';
 		}
 
+		// Код 301 браузер запоминает навсегда: после смены цели посетитель всё равно уйдёт по старому адресу.
+		// Поэтому постоянное перенаправление ставит только администратор.
+		if ( 301 === $code && null !== $this->actor && ! $this->actor['admin'] ) {
+			$code = 302;
+		}
+
 		$slug = Slug::normalize( $slug );
 
 		if ( '' === $slug ) {
@@ -106,7 +173,7 @@ final class Service {
 		}
 
 		return array(
-			'id'         => $this->store->insert( $slug, $target, $code, $campaign, $expires_at ),
+			'id'         => $this->store->insert( $slug, $target, $code, $campaign, $expires_at, null !== $this->actor ? $this->actor['id'] : 0 ),
 			'slug'       => $slug,
 			'campaign'   => $campaign,
 			'expires_at' => $expires_at,
@@ -197,8 +264,8 @@ final class Service {
 			return; }
 		if ( null !== $this->store->find( $slug ) ) {
 			$this->store->hit( $slug ); }
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- сервис работает без WordPress.
-		$host = strtolower( (string) parse_url( $referrer, PHP_URL_HOST ) );
+		// Известные источники пишутся по имени, остальные — одной строкой «other»: выдуманный Referer не раздует таблицу.
+		$host = \IndexPilot\Http\Referrers::bucket( \IndexPilot\Http\Referrers::host( $referrer ), $this->own_host );
 		$this->click_log?->add( $slug, gmdate( 'Y-m-d' ), substr( $host, 0, 100 ) );
 	}
 
@@ -240,6 +307,12 @@ final class Service {
 		if ( strlen( $target ) > self::MAX_TARGET || 1 === preg_match( '/[\x00-\x20\x7f<>"]/', $target ) || 1 !== preg_match( '#^https?://[^/?\#]+\.[^/?\#]+#i', $target ) ) {
 			return 'Адрес должен быть полным и начинаться с http:// или https://.';
 		}
-		return null !== $this->store->find_by_id( $id ) && $this->store->update_target( $id, $target );
+		$link = $this->store->find_by_id( $id );
+
+		if ( null !== $link && ! $this->can_change( $link ) ) {
+			return 'Чужую ссылку может изменить или удалить только администратор.';
+		}
+
+		return null !== $link && $this->store->update_target( $id, $target );
 	}
 }

@@ -101,7 +101,7 @@ final class ShortLinksController {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function create( \WP_REST_Request $request ) {
-		$result = $this->service->create(
+		$result = $this->service->acting_as( get_current_user_id(), current_user_can( 'manage_options' ) )->create(
 			esc_url_raw( trim( (string) $request->get_param( 'target' ) ) ),
 			sanitize_text_field( (string) $request->get_param( 'slug' ) ),
 			(int) $request->get_param( 'code' ),

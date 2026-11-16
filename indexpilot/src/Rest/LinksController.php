@@ -73,6 +73,7 @@ final class LinksController {
 					),
 					'content' => array(
 						'type'              => 'string',
+						'maxLength'         => \IndexPilot\Rest\AnalyzeController::MAX_CONTENT,
 						'default'           => '',
 						'sanitize_callback' => static fn( $value ): string => is_string( $value ) ? $value : '',
 					),

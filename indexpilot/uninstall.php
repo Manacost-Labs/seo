@@ -93,7 +93,17 @@ foreach ( array( 'indexpilot_search_daily', 'indexpilot_search_batch', 'indexpil
 }
 delete_post_meta_by_key( '_indexpilot_bridge' );
 delete_post_meta_by_key( '_indexpilot_keep' );
-foreach ( array( 'indexpilot_redirects', 'indexpilot_404', 'indexpilot_health', 'indexpilot_queries' ) as $indexpilot_table ) {
+// Ассистенты: копилка и таблица заходов, контрольные вопросы; сводки авторов, отметки «Проверил», поля игроков.
+delete_option( 'indexpilot_ai_buffer' );
+delete_option( 'indexpilot_ai_db_version' );
+delete_option( 'indexpilot_ai_questions' );
+delete_metadata( 'user', 0, '_indexpilot_author_summary', '', true );
+foreach ( array( '_indexpilot_reviewed_by', '_indexpilot_reviewed_version', '_indexpilot_reviewed_at' ) as $indexpilot_meta_key ) {
+	delete_post_meta_by_key( $indexpilot_meta_key );
+}
+delete_metadata( 'term', 0, '_indexpilot_twitch', '', true );
+delete_metadata( 'term', 0, '_indexpilot_player_about', '', true );
+foreach ( array( 'indexpilot_redirects', 'indexpilot_404', 'indexpilot_health', 'indexpilot_queries', 'indexpilot_ai_visits' ) as $indexpilot_table ) {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- удаление собственной таблицы плагина по явной настройке.
 	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $wpdb->prefix . $indexpilot_table ) );
 }

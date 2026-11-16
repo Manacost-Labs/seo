@@ -101,16 +101,19 @@ final class ShortLinksPage {
 			wp_die( esc_html__( 'Недостаточно прав.', 'indexpilot' ), 403 );
 		}
 
+		// Свои ссылки редактор меняет и удаляет сам, чужие — только администратор.
+		$service = $this->service->acting_as( get_current_user_id(), current_user_can( 'manage_options' ) );
+
 		if ( 'delete' === $_POST['indexpilot_shortlink_action'] ) {
-			$this->store->delete( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0 );
-			$this->notice = array( __( 'Ссылка удалена.', 'indexpilot' ), 'success' );
+			$result       = $service->delete( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0 );
+			$this->notice = true === $result ? array( __( 'Ссылка удалена.', 'indexpilot' ), 'success' ) : array( $this->error_text( (string) $result ), 'error' );
 
 			return;
 		}
 
 		if ( 'bulk' === $_POST['indexpilot_shortlink_action'] ) {
 			$lines   = isset( $_POST['lines'] ) ? sanitize_textarea_field( wp_unslash( $_POST['lines'] ) ) : '';
-			$results = $this->service->create_many(
+			$results = $service->create_many(
 				$lines,
 				isset( $_POST['code'] ) ? absint( wp_unslash( $_POST['code'] ) ) : 302,
 				isset( $_POST['campaign'] ) ? sanitize_text_field( wp_unslash( $_POST['campaign'] ) ) : ''
@@ -136,7 +139,7 @@ final class ShortLinksPage {
 		$slug   = isset( $_POST['slug'] ) ? sanitize_text_field( wp_unslash( $_POST['slug'] ) ) : '';
 		$code   = isset( $_POST['code'] ) ? absint( wp_unslash( $_POST['code'] ) ) : 302;
 		if ( 'update' === $_POST['indexpilot_shortlink_action'] ) {
-			$result       = $this->service->update_target( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0, $target );
+			$result       = $service->update_target( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0, $target );
 			$this->notice = true === $result ? array( __( 'Адрес обновлён.', 'indexpilot' ), 'success' ) : array( is_string( $result ) ? $this->error_text( $result ) : __( 'Не удалось обновить адрес.', 'indexpilot' ), 'error' );
 			return;
 		}
@@ -146,7 +149,7 @@ final class ShortLinksPage {
 		}
 		$campaign = isset( $_POST['campaign'] ) ? sanitize_text_field( wp_unslash( $_POST['campaign'] ) ) : '';
 		$expiry   = isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : '';
-		$result   = $this->service->create( $target, $slug, $code, $utm, $campaign, $expiry );
+		$result   = $service->create( $target, $slug, $code, $utm, $campaign, $expiry );
 
 		if ( is_string( $result ) ) {
 			$this->notice = array( $this->error_text( $result ), 'error' );
@@ -208,7 +211,7 @@ final class ShortLinksPage {
 						<td>
 							<select id="indexpilot-shortlink-code" name="code">
 								<option value="302"><?php esc_html_e( '302 — временное: каждый переход засчитывается', 'indexpilot' ); ?></option>
-								<option value="301"><?php esc_html_e( '301 — постоянное: браузер запоминает адрес, счётчик неполный', 'indexpilot' ); ?></option>
+								<option value="301"><?php esc_html_e( '301 — постоянное: браузер запоминает адрес, счётчик неполный; только администратор', 'indexpilot' ); ?></option>
 								<option value="307"><?php esc_html_e( '307 — временное, с сохранением метода запроса', 'indexpilot' ); ?></option>
 							</select>
 						</td>
@@ -351,9 +354,37 @@ final class ShortLinksPage {
 			'Код перенаправления должен быть 301, 302 или 307.' => __( 'Код перенаправления должен быть 301, 302 или 307.', 'indexpilot' ),
 			'Код ссылки: от 2 до 64 символов, латинские буквы, цифры, дефис и подчёркивание.' => __( 'Код ссылки: от 2 до 64 символов, латинские буквы, цифры, дефис и подчёркивание.', 'indexpilot' ),
 			'Этот код уже занят.'                => __( 'Этот код уже занят.', 'indexpilot' ),
+			'Ссылка не найдена.'                 => __( 'Ссылка не найдена.', 'indexpilot' ),
+			'Чужую ссылку может изменить или удалить только администратор.' => __( 'Чужую ссылку может изменить или удалить только администратор.', 'indexpilot' ),
 		);
 
 		return $known[ $error ] ?? $error;
+	}
+
+	/**
+	 * QR-код короткого адреса: картинка SVG строится здесь же, на сервере, без сторонних сервисов.
+	 *
+	 * @param string $url  Короткий адрес.
+	 * @param string $slug Код ссылки: из него имя файла.
+	 */
+	private function qr( string $url, string $slug ): void {
+		try {
+			$svg = \IndexPilot\ShortLinks\QrCode::encode( $url )->svg( 5 );
+		} catch ( \InvalidArgumentException $error ) {
+			return;
+		}
+
+		echo '<h3>' . esc_html__( 'QR-код', 'indexpilot' ) . ' ';
+		HelpTip::render( __( 'Ничего вписывать не нужно: код ведёт на короткий адрес выше.', 'indexpilot' ), __( 'Для заставки стрима и печати: зритель наводит камеру и попадает по короткой ссылке, переход засчитывается.', 'indexpilot' ) );
+		echo '</h3>';
+		// Картинка собрана кодом плагина только из чисел и постоянной разметки — пользовательского текста в ней нет.
+		echo '<div data-indexpilot-qr style="max-width:240px">' . $svg . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG целиком построен QrCode из модулей матрицы.
+		printf(
+			'<p><a class="button" download="%1$s" href="%2$s">%3$s</a></p>',
+			esc_attr( 'qr-' . $slug . '.svg' ),
+			esc_attr( 'data:image/svg+xml;base64,' . base64_encode( $svg ) ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- картинка для скачивания.
+			esc_html__( 'Скачать SVG', 'indexpilot' )
+		);
 	}
 
 	/** Подробности ссылки и форма изменения цели. */
@@ -376,6 +407,8 @@ final class ShortLinksPage {
 		<?php submit_button( __( 'Изменить адрес', 'indexpilot' ) ); ?>
 </form>
 		<?php
+		$this->qr( $this->router->url( $link['slug'] ), $link['slug'] );
+
 		if ( null === $this->click_log ) {
 			echo '<p>' . esc_html__( 'Журнал переходов не подключён.', 'indexpilot' ) . '</p>';
 			return;

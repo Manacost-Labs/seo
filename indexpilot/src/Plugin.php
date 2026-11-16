@@ -269,6 +269,10 @@ final class Plugin {
 					( new \IndexPilot\Admin\RedirectsPage( $this->redirect_store(), array( $this, 'redirect_manager' ), $this->redirects(), $this->not_found_store() ) )->register();
 					( new \IndexPilot\Admin\NotFoundPage( $this->not_found_store(), $this->db() ) )->register();
 					( new \IndexPilot\Admin\HealthPage( $this->health() ) )->register();
+					( new \IndexPilot\Admin\HeadInspector() )->register();
+					( new \IndexPilot\Admin\Reports\AuthorsReport() )->register();
+					( new \IndexPilot\Admin\ReviewBox() )->register();
+					( new \IndexPilot\Admin\Reports\AiReport( new \IndexPilot\Ai\VisitCounter( $this->db() ) ) )->register();
 					( new LinksReport( $this->link_scanner(), $this->link_reports() ) )->register();
 					( new \IndexPilot\Admin\Reports\ImagesReport() )->register();
 					( new SettingsPage( $this->settings(), $this->site_defaults(), $this->variables() ) )->register();
@@ -305,6 +309,9 @@ final class Plugin {
 		( new RedirectHandler( $this->db() ) )->register();
 		( new AutoRedirect( array( $this, 'redirect_manager' ) ) )->register();
 
+		// Заходы роботов ассистентов и переходы из ассистентов: на обычной странице — только сравнение строк, без базы.
+		( new \IndexPilot\Ai\VisitCounter( $this->db() ) )->register();
+
 		// Самопроверка сайта и проверка внешних адресов: только по расписанию и по кнопке в админке.
 		$this->health()->register();
 
@@ -338,6 +345,10 @@ final class Plugin {
 			function (): void {
 				$this->breadcrumbs()->register();
 				$this->author_box()->register();
+				// Сводка автора и отметка «Проверил»: пересчёт при сохранении записи, шорткод сводки.
+				( new \IndexPilot\Authors\AuthorPages( new AuthorProfile(), $this->lexicon() ) )->register();
+				// Страницы стримеров (deck_streamer): поля термина в админке.
+				( new \IndexPilot\Game\StreamerPage() )->register();
 
 				// Блоки из панели записи: краткий ответ, вопросы и ответы, факты и цитаты.
 				( new AnswerBlock( $this->settings() ) )->register();
@@ -504,6 +515,10 @@ final class Plugin {
 					( new Head( $this->resolver(), $this->settings() ) )->register();
 					( new SchemaOutput( new PageData( $this->resolver(), $this->settings(), $this->trail(), new AuthorProfile(), $this->faq_block() ), new GraphBuilder() ) )->register();
 					( new Verification( $this->settings() ) )->register();
+					// Закрытые части записи: обёртка с классом и пометка платного содержимого в разметке.
+					( new \IndexPilot\Schema\Paywall() )->register();
+					( new \IndexPilot\Authors\AuthorPages( new AuthorProfile(), $this->lexicon() ) )->register_front();
+					( new \IndexPilot\Game\StreamerPage() )->register_front();
 				}
 			}
 		);
@@ -732,7 +747,8 @@ final class Plugin {
 					? (string) get_permalink( $post )
 					: '';
 			},
-			new ShortLinkClickLog( $wpdb )
+			new ShortLinkClickLog( $wpdb ),
+			(string) wp_parse_url( home_url(), PHP_URL_HOST )
 		);
 	}
 

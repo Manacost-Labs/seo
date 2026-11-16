@@ -53,6 +53,16 @@ final class IdFactory {
 	}
 
 	/**
+	 * Игрок или стример без учётной записи на сайте: один и тот же узел в разметке колоды и на странице игрока.
+	 *
+	 * @param string $home Адрес главной страницы.
+	 * @param string $name Имя игрока.
+	 */
+	public static function player( string $home, string $name ): string {
+		return self::person( $home, 'player:' . mb_strtolower( trim( $name ) ) );
+	}
+
+	/**
 	 * Часть страницы: webpage, breadcrumb, article, primaryimage и другие.
 	 *
 	 * @param string $url  Адрес страницы.

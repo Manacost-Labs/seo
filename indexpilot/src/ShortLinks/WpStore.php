@@ -15,7 +15,7 @@ namespace IndexPilot\ShortLinks;
 final class WpStore implements Store {
 
 	public const DB_OPTION  = 'indexpilot_shortlinks_db_version';
-	public const DB_VERSION = '2';
+	public const DB_VERSION = '3';
 
 	/**
 	 * Конструктор.
@@ -53,6 +53,7 @@ final class WpStore implements Store {
 				clicks bigint(20) unsigned NOT NULL DEFAULT 0,
 				created datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 				last_click datetime DEFAULT NULL,
+				author bigint(20) unsigned NOT NULL DEFAULT 0,
 				PRIMARY KEY  (id),
 				UNIQUE KEY slug (slug)
 			) {$this->db->get_charset_collate()};"
@@ -70,7 +71,7 @@ final class WpStore implements Store {
 	 */
 	public function find( string $slug ): ?array {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- собственная таблица, поиск по уникальному ключу.
-		$row = $this->db->get_row( $this->db->prepare( 'SELECT id, slug, target, code, campaign, expires_at, clicks FROM %i WHERE slug = %s', $this->table(), $slug ), ARRAY_A );
+		$row = $this->db->get_row( $this->db->prepare( 'SELECT id, slug, target, code, campaign, expires_at, clicks, author FROM %i WHERE slug = %s', $this->table(), $slug ), ARRAY_A );
 
 		return is_array( $row ) ? self::typed( $row ) : null;
 	}
@@ -84,7 +85,7 @@ final class WpStore implements Store {
 	 * @param string $campaign Кампания.
 	 * @param ?string $expires_at Срок действия.
 	 */
-	public function insert( string $slug, string $target, int $code, string $campaign = '', ?string $expires_at = null ): int {
+	public function insert( string $slug, string $target, int $code, string $campaign = '', ?string $expires_at = null, int $author = 0 ): int {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- собственная таблица плагина.
 		$this->db->insert(
 			$this->table(),
@@ -95,8 +96,9 @@ final class WpStore implements Store {
 				'campaign'   => $campaign,
 				'expires_at' => $expires_at,
 				'created'    => current_time( 'mysql', true ),
+				'author'     => $author,
 			),
-			array( '%s', '%s', '%d', '%s', '%s', '%s' )
+			array( '%s', '%s', '%d', '%s', '%s', '%s', '%d' )
 		);
 
 		return (int) $this->db->insert_id;
@@ -125,7 +127,7 @@ final class WpStore implements Store {
 		$like   = '%' . $this->db->esc_like( $search ) . '%';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- список в админке по собственной таблице.
-		$rows = $this->db->get_results( $this->db->prepare( 'SELECT id, slug, target, code, campaign, expires_at, clicks, created, last_click FROM %i WHERE (%s = %s OR campaign = %s) AND (%s = %s OR slug LIKE %s OR target LIKE %s) ORDER BY id DESC LIMIT %d OFFSET %d', $this->table(), null === $campaign ? 'all' : 'filter', 'all', $campaign ?? '', $search, '', $like, $like, $limit, $offset ), ARRAY_A );
+		$rows = $this->db->get_results( $this->db->prepare( 'SELECT id, slug, target, code, campaign, expires_at, clicks, created, last_click, author FROM %i WHERE (%s = %s OR campaign = %s) AND (%s = %s OR slug LIKE %s OR target LIKE %s) ORDER BY id DESC LIMIT %d OFFSET %d', $this->table(), null === $campaign ? 'all' : 'filter', 'all', $campaign ?? '', $search, '', $like, $like, $limit, $offset ), ARRAY_A );
 
 		return array_map(
 			static fn( array $row ): array => self::typed( $row ) + array(
@@ -169,6 +171,7 @@ final class WpStore implements Store {
 			'clicks'     => (int) $row['clicks'],
 			'campaign'   => (string) $row['campaign'],
 			'expires_at' => $row['expires_at'],
+			'author'     => (int) ( $row['author'] ?? 0 ),
 		);
 	}
 

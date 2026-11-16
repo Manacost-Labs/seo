@@ -31,6 +31,16 @@ final class AnalyzeController {
 	private const TEXT_OVERRIDES = array( 'seo_title', 'seo_description', 'focus_keyword', 'title', 'excerpt', 'content', 'slug', 'og_title', 'og_description', 'answer', 'sponsored' );
 
 	/**
+	 * Предел длины текста записи в запросе: тяжёлый анализ мегабайтного текста — нагрузка на сервер.
+	 */
+	public const MAX_CONTENT = 300000;
+
+	/**
+	 * Предел длины остальных текстовых полей.
+	 */
+	public const MAX_FIELD = 1000;
+
+	/**
 	 * Конструктор.
 	 *
 	 * @param MetaResolver $resolver Резолвер мета-данных.
@@ -50,6 +60,7 @@ final class AnalyzeController {
 	public function register(): void {
 		$text = array(
 			'type'              => 'string',
+			'maxLength'         => self::MAX_FIELD,
 			'sanitize_callback' => static fn( $value ): string => is_string( $value ) ? $value : '',
 		);
 
@@ -70,8 +81,12 @@ final class AnalyzeController {
 				'sanitize_callback' => 'sanitize_key',
 			),
 			'keywords'    => array(
-				'type'  => 'array',
-				'items' => array( 'type' => 'string' ),
+				'type'     => 'array',
+				'maxItems' => MetaKeys::MAX_KEYWORDS,
+				'items'    => array(
+					'type'      => 'string',
+					'maxLength' => self::MAX_FIELD,
+				),
 			),
 			'title_px'    => array(
 				'type'    => 'integer',
@@ -83,6 +98,11 @@ final class AnalyzeController {
 		foreach ( self::TEXT_OVERRIDES as $field ) {
 			$args[ $field ] = $text;
 		}
+
+		// Текст записи и краткий ответ длиннее заголовков.
+		$args['content']['maxLength'] = self::MAX_CONTENT;
+		$args['excerpt']['maxLength'] = self::MAX_CONTENT;
+		$args['answer']['maxLength']  = 5000;
 
 		register_rest_route(
 			self::REST_NAMESPACE,

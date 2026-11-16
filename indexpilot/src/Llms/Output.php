@@ -67,6 +67,7 @@ final class Output {
 
 		status_header( 200 );
 		header( 'Content-Type: text/plain; charset=UTF-8' );
+		header( 'X-Content-Type-Options: nosniff' );
 		header( 'X-Robots-Tag: noindex' );
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- обычный текст (Content-Type: text/plain), разметка HTML из значений убрана при сборке.
