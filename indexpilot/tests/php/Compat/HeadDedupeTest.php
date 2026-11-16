@@ -48,5 +48,15 @@ final class HeadDedupeTest extends TestCase {
 		self::assertSame( 'Наш', DeckArchetypes::pass( 'Наш', static fn( string $v ): string => $v ), 'Не архетип: плагин колод возвращает значение как есть.' );
 		self::assertSame( 'Наш', DeckArchetypes::pass( 'Наш', static fn( string $v ): string => '' ) );
 		self::assertSame( 'Наш', DeckArchetypes::pass( 'Наш', null ), 'Плагина колод нет.' );
+
+		$long  = 'Айя Разбойник — 43 колод Hearthstone для класса Разбойник в режиме Стандарт с кодами, winrate, числом игр и свежими вариантами архетипа. English aliases: AYAYA Rogue, Aya Rogue.';
+		$short = DeckArchetypes::shorten( $long );
+
+		self::assertLessThanOrEqual( 160, mb_strlen( $short ) );
+		self::assertStringEndsWith( '…', $short );
+		self::assertStringStartsWith( 'Айя Разбойник — 43 колод', $short );
+		self::assertSame( 'Коротко.', DeckArchetypes::shorten( 'Коротко.' ) );
+		self::assertTrue( mb_check_encoding( DeckArchetypes::shorten( str_repeat( 'вор ', 60 ) ), 'UTF-8' ), 'Обрезка не рвёт русские буквы.' );
+		self::assertArrayNotHasKey( 'indexpilot_canonical', DeckArchetypes::MAP, 'Canonical архетипа — его чистый адрес.' );
 	}
 }

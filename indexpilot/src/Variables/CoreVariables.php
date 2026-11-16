@@ -27,7 +27,7 @@ final class CoreVariables {
 	/**
 	 * Значения-заглушки, которые на сайтах стоят вместо пустого поля; в шаблонах считаются пустыми.
 	 */
-	private const PLACEHOLDERS = array( 'unknown', 'n/a', 'none', 'null', '-', '—' );
+	private const PLACEHOLDERS = array( 'unknown', 'n/a', 'none', 'null', '-', '—', '0' );
 
 	/**
 	 * Служебные поля (имя начинается с «_»), которые можно выводить через %cf_КЛЮЧ%: поля колод.
@@ -249,10 +249,24 @@ final class CoreVariables {
 
 		// Дата изменения не раньше даты публикации — та же, что в тегах и разметке (см. PostDates).
 		if ( 'post_modified' === $field && '' !== $date ) {
-			return PostDates::modified( (string) get_option( 'date_format' ), false, $context->object_id, true );
+			return PostDates::modified( self::date_format(), false, $context->object_id, true );
 		}
 
-		return '' === $date ? '' : (string) mysql2date( get_option( 'date_format' ), $date );
+		return '' === $date ? '' : (string) mysql2date( self::date_format(), $date );
+	}
+
+	/**
+	 * Формат даты в заголовках и описаниях. На русском сайте с коротким месяцем («M j, Y» → «Ноя 16, 2026»)
+	 * дата пишется по-русски: «16 ноября 2026». Остальные форматы сайта не меняются.
+	 */
+	public static function date_format(): string {
+		$format = (string) get_option( 'date_format' );
+
+		if ( str_starts_with( determine_locale(), 'ru' ) && str_contains( $format, 'M' ) && ! str_contains( $format, 'F' ) ) {
+			return 'j F Y';
+		}
+
+		return $format;
 	}
 
 	/**

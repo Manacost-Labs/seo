@@ -54,7 +54,8 @@ final class TaxonomyProvider {
 		$types = array();
 
 		foreach ( get_taxonomies( array( 'public' => true ) ) as $taxonomy ) {
-			$config = $this->settings->taxonomy( $taxonomy );
+			// Таксономии без своих адресов («/?deck_streamer=…») в карту не попадают.
+			$config = \IndexPilot\Compat\QueryOnlyTaxonomies::config( $this->settings->taxonomy( $taxonomy ), (string) $taxonomy );
 
 			if ( is_taxonomy_viewable( $taxonomy ) && ! empty( $config['sitemap'] ) && empty( $config['noindex'] ) ) {
 				$types[] = (string) $taxonomy;

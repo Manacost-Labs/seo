@@ -10,10 +10,12 @@ declare( strict_types=1 );
 namespace IndexPilot\Compat;
 
 /**
- * Плагин колод hs-manacost.ru сам собирает заголовок, описание и canonical страниц архетипов: режим, число колод,
- * винрейт, адрес с выбранным режимом (?hs_mode=standart). Отдаёт он их через фильтры AIOSEO — без AIOSEO их никто
- * не вызывает. Класс находит эти обработчики и пропускает через них значения IndexPilot: на страницах архетипов
- * берутся данные плагина колод, на остальных значения не меняются. Код плагина колод не правится.
+ * Плагин колод hs-manacost.ru сам собирает заголовок и описание страниц архетипов: режим, число колод, винрейт.
+ * Отдаёт он их через фильтры AIOSEO — без AIOSEO их никто не вызывает. Класс находит эти обработчики и пропускает
+ * через них значения IndexPilot: на страницах архетипов берутся данные плагина колод, на остальных значения не меняются.
+ * Canonical плагина колод (адрес с ?hs_mode=standart, одинаковый даже для вольного режима) не берётся: страница
+ * указывает на свой чистый адрес — тот же, что в карте сайта. Описание обрезается до 160 знаков по слову.
+ * Код плагина колод не правится.
  */
 final class DeckArchetypes {
 
@@ -28,8 +30,12 @@ final class DeckArchetypes {
 	public const MAP = array(
 		'indexpilot_title'       => array( 'aioseo_title', 'filter_aioseo_archetype_title' ),
 		'indexpilot_description' => array( 'aioseo_description', 'filter_aioseo_archetype_description' ),
-		'indexpilot_canonical'   => array( 'aioseo_canonical_url', 'filter_aioseo_archetype_canonical_url' ),
 	);
+
+	/**
+	 * Предел длины описания: длиннее поисковик всё равно обрежет.
+	 */
+	public const DESCRIPTION_LIMIT = 160;
 
 	/**
 	 * Подключает мост. Вызывается, только когда теги печатает IndexPilot.
@@ -38,7 +44,9 @@ final class DeckArchetypes {
 		foreach ( self::MAP as $hook => $source ) {
 			add_filter(
 				$hook,
-				fn( $value ) => self::pass( $value, $this->handler( $source[0], $source[1] ) ),
+				fn( $value ) => 'indexpilot_description' === $hook
+					? self::shorten( self::pass( $value, $this->handler( $source[0], $source[1] ) ) )
+					: self::pass( $value, $this->handler( $source[0], $source[1] ) ),
 				20
 			);
 		}
@@ -59,6 +67,24 @@ final class DeckArchetypes {
 		$result = $handler( $value );
 
 		return is_string( $result ) && '' !== trim( $result ) ? $result : $value;
+	}
+
+	/**
+	 * Описание не длиннее предела: обрезается по границе слова, с многоточием.
+	 *
+	 * @param mixed $text Описание.
+	 * @return mixed
+	 */
+	public static function shorten( $text ) {
+		if ( ! is_string( $text ) || mb_strlen( $text ) <= self::DESCRIPTION_LIMIT ) {
+			return $text;
+		}
+
+		$cut  = mb_substr( $text, 0, self::DESCRIPTION_LIMIT - 1 );
+		$last = mb_strrpos( $cut, ' ' );
+		$cut  = false !== $last && $last > self::DESCRIPTION_LIMIT / 2 ? mb_substr( $cut, 0, $last ) : $cut;
+
+		return (string) preg_replace( '/[\s,.;:—-]+$/u', '', $cut ) . '…';
 	}
 
 	/**

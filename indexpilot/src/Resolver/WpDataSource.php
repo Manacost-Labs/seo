@@ -131,6 +131,11 @@ final class WpDataSource implements DataSource {
 
 		$is_post = Context::POST === $context->type;
 
+		// Статичная главная листается как архив: /page/2/, а не /2/ (адрес /2/ — чужая запись или вложение).
+		if ( $is_post && self::is_static_front( $context->object_id ) ) {
+			$is_post = false;
+		}
+
 		if ( ! $wp_rewrite instanceof \WP_Rewrite || ! $wp_rewrite->using_permalinks() ) {
 			return add_query_arg( $is_post ? 'page' : 'paged', $context->page, $url );
 		}
@@ -139,6 +144,15 @@ final class WpDataSource implements DataSource {
 		$suffix = $is_post ? (string) $context->page : $wp_rewrite->pagination_base . '/' . $context->page;
 
 		return user_trailingslashit( trailingslashit( $url ) . $suffix, $is_post ? 'single_paged' : 'paged' );
+	}
+
+	/**
+	 * Запись — статичная главная страница сайта.
+	 *
+	 * @param int $post_id ID записи.
+	 */
+	private static function is_static_front( int $post_id ): bool {
+		return $post_id > 0 && 'page' === get_option( 'show_on_front' ) && (int) get_option( 'page_on_front' ) === $post_id;
 	}
 
 	/**

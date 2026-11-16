@@ -122,7 +122,7 @@ use IndexPilot\Variables\VariableRegistry;
  */
 final class Plugin {
 
-	public const VERSION = '1.0.0-rc7';
+	public const VERSION = '1.0.0-rc8';
 
 	/**
 	 * Единственный экземпляр.
@@ -503,6 +503,9 @@ final class Plugin {
 		add_action( 'template_redirect', array( $this->archive_text(), 'register' ) );
 
 		// Черновик с адресом опубликованной записи не превращает её страницу в 404. Работает и рядом с другим SEO-плагином.
+		// Архивы таксономий без своих адресов («/?deck_streamer=…») закрыты от индексации и не попадают в карту.
+		( new \IndexPilot\Compat\QueryOnlyTaxonomies() )->register();
+
 		if ( ! is_admin() ) {
 			( new \IndexPilot\Compat\PublishedFirst() )->register();
 			// Карты «[hs_card]» в кратком ответе и вопросах: подсказки всплывают, даже если в тексте записи карт нет.
