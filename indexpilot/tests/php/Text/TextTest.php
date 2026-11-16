@@ -70,4 +70,16 @@ final class TextTest extends TestCase {
 		// Обычные шорткоды по-прежнему оставляют свой текст.
 		self::assertStringContainsString( 'Подсказка', Cleaner::to_plain_text( '[su_note]Подсказка[/su_note]' ) );
 	}
+
+	public function test_vip_locker_paywall_hides_text_and_its_access_code(): void {
+		// Так пейвол записан в 78 статьях kolodahearthstone.com: с кодом доступа в атрибуте.
+		$text = Cleaner::to_plain_text( "<p>Открытая часть.</p>[vip_locker code=\"код-1234\"]\n\n<p>Платный разбор.</p>[/vip_locker]<p>Итог.</p>" );
+
+		self::assertStringContainsString( 'Открытая часть.', $text );
+		self::assertStringContainsString( 'Итог.', $text );
+		self::assertStringNotContainsString( 'Платный', $text );
+		self::assertStringNotContainsString( 'код-1234', $text );
+		self::assertTrue( \IndexPilot\Schema\Paywall::is_lock( 'vip_locker' ) );
+		self::assertTrue( \IndexPilot\Schema\Paywall::has_locked( '[vip_locker code="код-1234"]x[/vip_locker]' ) );
+	}
 }
