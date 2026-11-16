@@ -356,6 +356,43 @@ final class HeadInspector {
 	}
 
 	/**
+	 * Видно ли основное содержимое без JavaScript (7.4). Для колоды названия карт берутся из фильтра
+	 * indexpilot_deck_card_names — их источник на боевых сайтах свой.
+	 *
+	 * @param string $url  Адрес страницы.
+	 * @param string $html HTML страницы.
+	 */
+	private function rendered( string $url, string $html ): void {
+		$post_id = (int) url_to_postid( $url );
+
+		/**
+		 * Названия карт колоды: каждое должно быть в HTML страницы текстом.
+		 *
+		 * @param list<string> $cards   Названия карт.
+		 * @param int          $post_id ID записи или 0.
+		 */
+		$cards  = $post_id > 0 ? array_values( array_map( 'strval', (array) apply_filters( 'indexpilot_deck_card_names', array(), $post_id ) ) ) : array();
+		$result = \IndexPilot\Audit\RenderedPage::analyze( $html, $cards );
+
+		if ( $result['hidden'] ) {
+			echo '<div class="notice notice-error inline" data-indexpilot-no-js="hidden"><p><strong>' . esc_html__( 'Основное содержимое не видно без JavaScript.', 'indexpilot' ) . '</strong> ';
+			/* translators: %d: число слов. */
+			echo esc_html( sprintf( __( 'В основной части страницы без скриптов %d слов. Поисковик и ассистент, не выполняющие скрипты, видят почти пустую страницу: состав колоды нужно выводить текстом на сервере.', 'indexpilot' ), $result['words'] ) );
+
+			if ( array() !== $result['missing'] ) {
+				echo ' ' . esc_html( __( 'Нет в тексте:', 'indexpilot' ) . ' ' . implode( ', ', $result['missing'] ) );
+			}
+
+			echo '</p></div>';
+
+			return;
+		}
+
+		/* translators: %d: число слов. */
+		echo '<p data-indexpilot-no-js="visible">' . esc_html( sprintf( __( 'Без JavaScript видно %d слов основного текста.', 'indexpilot' ), $result['words'] ) ) . '</p>';
+	}
+
+	/**
 	 * Загружает страницу и печатает отчёт.
 	 *
 	 * @param string $url Адрес своей страницы.
@@ -384,10 +421,13 @@ final class HeadInspector {
 			return;
 		}
 
-		$report = self::inspect( (string) wp_remote_retrieve_body( $response ) );
+		$body   = (string) wp_remote_retrieve_body( $response );
+		$report = self::inspect( $body );
 
 		/* translators: %d: код ответа. */
 		echo '<p data-indexpilot-inspect-status>' . esc_html( sprintf( __( 'Ответ сервера: %d.', 'indexpilot' ), $code ) ) . '</p>';
+
+		$this->rendered( $url, $body );
 
 		if ( array() === $report['duplicates'] ) {
 			echo '<div class="notice notice-success inline"><p data-indexpilot-inspect-clean>' . esc_html__( 'Повторов нет.', 'indexpilot' ) . '</p></div>';
