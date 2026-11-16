@@ -222,6 +222,7 @@ final class ClassicMetabox {
 					<?php esc_html_e( 'Анализ', 'indexpilot' ); ?>
 					<span class="indexpilot-score" data-indexpilot-score><?php echo esc_html( '' !== $score ? $score : '—' ); ?></span>
 				</button>
+				<button type="button" class="indexpilot-tab" role="tab" aria-selected="false" data-tab="queries"><?php esc_html_e( 'Запросы', 'indexpilot' ); ?></button>
 				<button type="button" class="indexpilot-tab" role="tab" aria-selected="false" data-tab="social"><?php esc_html_e( 'Соцсети', 'indexpilot' ); ?></button>
 				<button type="button" class="indexpilot-tab" role="tab" aria-selected="false" data-tab="advanced"><?php esc_html_e( 'Дополнительно', 'indexpilot' ); ?></button>
 			</div>
@@ -318,6 +319,17 @@ final class ClassicMetabox {
 				 * @param \WP_Post $post Запись.
 				 */
 				do_action( 'indexpilot_metabox_analysis', $post );
+				?>
+			</div>
+
+			<div class="indexpilot-pane" role="tabpanel" data-pane="queries" hidden>
+				<?php
+				/**
+				 * Вкладка «Запросы»: запросы из Google Search Console и Яндекс Вебмастера (модуль данных поиска).
+				 *
+				 * @param \WP_Post $post Запись.
+				 */
+				do_action( 'indexpilot_metabox_queries', $post );
 				?>
 			</div>
 

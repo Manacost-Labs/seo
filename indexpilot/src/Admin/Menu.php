@@ -28,7 +28,7 @@ final class Menu {
 		OverviewPage::SLUG,
 		array(
 			'content',
-			array( BulkEditor::SLUG, AuditReport::SLUG, LinksReport::SLUG, ImagesReport::SLUG, PatchReport::SLUG ),
+			array( BulkEditor::SLUG, AuditReport::SLUG, LinksReport::SLUG, ImagesReport::SLUG, PatchReport::SLUG, Reports\QueriesReport::SLUG, Reports\TopicsReport::SLUG, Reports\StaleReport::SLUG ),
 		),
 		array(
 			'promo',
@@ -36,7 +36,7 @@ final class Menu {
 		),
 		array(
 			'tech',
-			array( RedirectsPage::SLUG, NotFoundPage::SLUG, RedirectsReport::SLUG, HealthPage::SLUG, SearchEnginesPage::SLUG, ShortLinksPage::SLUG ),
+			array( RedirectsPage::SLUG, NotFoundPage::SLUG, RedirectsReport::SLUG, HealthPage::SLUG, SearchEnginesPage::SLUG, SearchDataPage::SLUG, ShortLinksPage::SLUG ),
 		),
 		SettingsPage::SLUG,
 		ImportPage::SLUG,

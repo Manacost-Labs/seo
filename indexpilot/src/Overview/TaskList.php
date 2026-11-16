@@ -35,6 +35,8 @@ final class TaskList {
 		'no_description',
 		'redirect_chains',
 		'orphans',
+		'queries_cannibal',
+		'queries_near_top',
 		'thin',
 		'h1',
 		'duplicate_descriptions',

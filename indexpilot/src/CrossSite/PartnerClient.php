@@ -96,6 +96,49 @@ final class PartnerClient {
 	}
 
 	/**
+	 * Мост между сайтами: страницы второго сайта с тем же основным ключом и страница того же архетипа.
+	 * Вызывается только по расписанию; страница сайта читает сохранённый ответ.
+	 *
+	 * @param string $keyword   Основной ключ записи.
+	 * @param string $archetype Название архетипа.
+	 * @return array{keyword: list<array{title: string, url: string}>, archetype: array{title: string, url: string}|null}|null null — второй сайт не настроен или не ответил.
+	 */
+	public function bridge( string $keyword, string $archetype ): ?array {
+		if ( ! $this->configured() ) {
+			return null;
+		}
+
+		$response = wp_safe_remote_get(
+			add_query_arg(
+				array(
+					'keyword'   => rawurlencode( $keyword ),
+					'archetype' => rawurlencode( $archetype ),
+				),
+				$this->url() . '/wp-json/indexpilot/v1/bridge'
+			),
+			array(
+				'timeout' => 3,
+				'headers' => array( KeywordAccess::HEADER => (string) $this->settings->general( 'partner_site_key' ) ),
+			)
+		);
+
+		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			return null;
+		}
+
+		$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+
+		if ( ! is_array( $data ) ) {
+			return null;
+		}
+
+		return array(
+			'keyword'   => array_values( array_filter( (array) ( $data['keyword'] ?? array() ), 'is_array' ) ),
+			'archetype' => is_array( $data['archetype'] ?? null ) ? $data['archetype'] : null,
+		);
+	}
+
+	/**
 	 * Адрес второго сайта без слэша в конце.
 	 */
 	private function url(): string {

@@ -83,6 +83,10 @@ final class OverviewPage {
 			'redirect_chains'        => array( __( 'Цепочек и петель редиректов: %d', 'indexpilot' ), __( 'Редирект ведёт на адрес, с которого стоит ещё один редирект.', 'indexpilot' ), RedirectsReport::SLUG, '' ),
 			/* translators: %d: число записей. */
 			'orphans'                => array( __( 'Записей без входящих ссылок: %d', 'indexpilot' ), __( 'На такую запись не ссылается ни одна другая.', 'indexpilot' ), LinksReport::SLUG, '' ),
+			/* translators: %d: число запросов. */
+			'queries_cannibal'       => array( __( 'Запросов, по которым показываются две страницы сайта: %d', 'indexpilot' ), __( 'Страницы делят клики и стоят ниже, чем стояла бы одна: оставьте под запрос одну.', 'indexpilot' ), Reports\QueriesReport::SLUG, '' ),
+			/* translators: %d: число страниц. */
+			'queries_near_top'       => array( __( 'Страниц на 5–15 месте в Google: %d', 'indexpilot' ), __( 'Немного не хватает до первой пятёрки: обновите страницу под главный запрос.', 'indexpilot' ), Reports\QueriesReport::SLUG, '' ),
 			/* translators: %d: число записей. */
 			'thin'                   => array( __( 'Записей, где мало текста: %d', 'indexpilot' ), __( 'Текст короче нормы для своего типа записей.', 'indexpilot' ), AuditReport::SLUG, 'thin' ),
 			/* translators: %d: число записей. */

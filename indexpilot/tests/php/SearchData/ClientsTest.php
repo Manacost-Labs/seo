@@ -37,7 +37,7 @@ final class ClientsTest extends TestCase {
   self::assertSame(array(array('page'=>'/a','query'=>'test','clicks'=>3,'impressions'=>200,'position'=>4.0)),$client->query('https://example.org','2026-01-01','2026-01-28'));
   $denied=new GoogleClient($json,$this->transport(static fn()=>array('code'=>403,'body'=>'')),static fn()=>1000);
   try {$denied->token();self::fail('Expected denial');} catch(SearchDataException $e) {
-   self::assertStringContainsString('РґРѕР±Р°РІСЊС‚Рµ РµС‘ Р°РґСЂРµСЃ test@example.org',$e->getMessage());
+   self::assertStringContainsString('добавьте её адрес test@example.org',$e->getMessage());
    self::assertStringNotContainsString($pem,$e->getMessage());
   }
  }
@@ -54,9 +54,9 @@ final class ClientsTest extends TestCase {
   $matcher=new UrlMatcher(static fn()=>0,static fn($url)=>'https://example.org/category/gajdy'===$url?42:0,static fn()=>0);
   self::assertSame(array('type'=>'term','id'=>42),$matcher->match('https://example.org/category/gajdy/page/2/?a=1#x'));
   $advisor=new QueryAdvisor();
-  $rows=array(array('query'=>'РіР°Р№Рґ','impressions'=>100,'clicks'=>10,'position'=>6.0));
+  $rows=array(array('query'=>'гайд','impressions'=>100,'clicks'=>10,'position'=>6.0));
   $same=static fn($a,$b)=>str_contains($b,$a);
-  self::assertSame('missing_in_title',$advisor->hints($rows,'РћР±Р·РѕСЂ','','РіР°Р№Рґ',$same)[0]['type']);
-  self::assertSame(array(),$advisor->hints($rows,'РџРѕР»РЅС‹Р№ РіР°Р№Рґ','','РіР°Р№Рґ',$same));
+  self::assertSame('missing_in_title',$advisor->hints($rows,'Обзор','','гайд',$same)[0]['type']);
+  self::assertSame(array(),$advisor->hints($rows,'Полный гайд','','гайд',$same));
  }
 }

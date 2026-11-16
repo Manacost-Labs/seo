@@ -1,6 +1,6 @@
 <?php
 /**
- * Р”Р°РЅРЅС‹Рµ РїРѕРёСЃРєРѕРІС‹С… СЃРёСЃС‚РµРј Р±РµР· Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ WordPress.
+ * Данные поисковых систем без зависимости от WordPress.
  *
  * @package IndexPilot
  */
@@ -26,13 +26,13 @@ final class QueryAdvisor {
 			);
 		};
 		if ( ! $same( $top['query'], $title ) ) {
-			$add( 'missing_in_title', $top, 'РЎР°РјС‹Р№ С‡Р°СЃС‚С‹Р№ Р·Р°РїСЂРѕСЃ РЅРµ РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ РІ Р·Р°РіРѕР»РѕРІРєРµ: ' . $top['query'] );}
+			$add( 'missing_in_title', $top, 'Самый частый запрос не встречается в заголовке: ' . $top['query'] );}
 		foreach ( $rows_for_page as $row ) {
 			if ( 200 <= $row['impressions'] && 5 >= $row['position'] && 0.02 > $row['clicks'] / $row['impressions'] ) {
-				$add( 'low_ctr', $row, 'РїРѕР·РёС†РёСЏ ' . $row['position'] . ', Р° РєР»РёРєРѕРІ РјР°Р»Рѕ вЂ” РїРµСЂРµРїРёС€РёС‚Рµ Р·Р°РіРѕР»РѕРІРѕРє Рё РѕРїРёСЃР°РЅРёРµ' );}
+				$add( 'low_ctr', $row, 'позиция ' . $row['position'] . ', а кликов мало — перепишите заголовок и описание' );}
 		}
 		if ( ! $same( $top['query'], $focus_keyword ) ) {
-			$add( 'focus_suggestion', $top, 'РџРѕРїСЂРѕР±СѓР№С‚Рµ РѕСЃРЅРѕРІРЅРѕР№ РєР»СЋС‡: ' . $top['query'] );}
+			$add( 'focus_suggestion', $top, 'Попробуйте основной ключ: ' . $top['query'] );}
 		return $hints;
 	}
 }
