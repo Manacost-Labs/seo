@@ -28,4 +28,15 @@ final class ArrayMetaStore implements MetaStore {
 	public function set( int $post_id, string $key, mixed $value ): void {
 		$this->posts[ $post_id ][ $key ] = $value;
 	}
+
+	/**
+	 * Записи, которые импорт просил загрузить заранее.
+	 *
+	 * @var list<list<int>>
+	 */
+	public array $primed = array();
+
+	public function prime( array $post_ids ): void {
+		$this->primed[] = $post_ids;
+	}
 }

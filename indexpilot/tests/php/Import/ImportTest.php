@@ -166,6 +166,7 @@ final class ImportTest extends TestCase {
 		self::assertSame( 9, $result['last_id'] );
 		self::assertTrue( $result['done'] );
 		self::assertSame( array( 1, 2 ), $touched );
+		self::assertSame( array( array( 1, 2, 3, 9 ) ), $store->primed, 'записи пачки загружаются одним вызовом' );
 	}
 
 	public function test_importer_resumes_after_the_last_processed_id(): void {

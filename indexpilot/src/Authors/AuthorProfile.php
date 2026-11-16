@@ -20,6 +20,22 @@ final class AuthorProfile {
 	public const IMAGE_ID = '_indexpilot_author_image_id';
 
 	/**
+	 * Числа записей авторов, уже посчитанные в этом запросе одним групповым запросом (карта авторов).
+	 *
+	 * @var array<int, int>
+	 */
+	private static array $counts = array();
+
+	/**
+	 * Запоминает числа записей авторов, посчитанные заранее, чтобы не считать их по одному.
+	 *
+	 * @param array<int, int> $counts ID автора => число опубликованных записей.
+	 */
+	public static function prime_counts( array $counts ): void {
+		self::$counts = $counts + self::$counts;
+	}
+
+	/**
 	 * Профиль автора.
 	 *
 	 * @param int $user_id ID пользователя.
@@ -72,6 +88,10 @@ final class AuthorProfile {
 	 * @param int $user_id ID пользователя.
 	 */
 	public static function post_count( int $user_id ): int {
+		if ( isset( self::$counts[ $user_id ] ) ) {
+			return self::$counts[ $user_id ];
+		}
+
 		$types = array();
 
 		foreach ( get_post_types( array( 'public' => true ) ) as $type ) {

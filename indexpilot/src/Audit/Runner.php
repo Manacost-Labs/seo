@@ -192,7 +192,8 @@ final class Runner {
 		);
 		$ids = array_map( 'intval', (array) $ids );
 
-		_prime_post_caches( $ids, false, true );
+		// Записи, их мета и рубрики (нужны заголовку) загружаются для всей пачки сразу.
+		_prime_post_caches( $ids, true, true );
 
 		foreach ( $ids as $id ) {
 			$this->audit_post( $id );

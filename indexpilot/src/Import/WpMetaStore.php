@@ -47,4 +47,13 @@ final class WpMetaStore implements MetaStore {
 	public function set( int $post_id, string $key, mixed $value ): void {
 		update_post_meta( $post_id, $key, wp_slash( $value ) );
 	}
+
+	/**
+	 * Загружает записи пачки, их мету и рубрики двумя-тремя запросами вместо нескольких на запись.
+	 *
+	 * @param list<int> $post_ids ID записей.
+	 */
+	public function prime( array $post_ids ): void {
+		_prime_post_caches( $post_ids, true, true );
+	}
 }

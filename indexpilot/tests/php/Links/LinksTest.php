@@ -6,6 +6,7 @@ namespace IndexPilot\Tests\Links;
 
 use IndexPilot\Links\Extractor;
 use IndexPilot\Links\Indexer;
+use IndexPilot\Links\PostPathResolver;
 use IndexPilot\Tests\Support\ArrayLinkStore;
 use PHPUnit\Framework\TestCase;
 
@@ -87,5 +88,45 @@ final class LinksTest extends TestCase {
 		$incoming = $store->incoming( array( 10, 20 ) );
 
 		self::assertSame( array( 20 ), array_keys( array_filter( $incoming, static fn( int $count ): bool => 0 === $count ) ) );
+	}
+
+	public function test_batch_asks_for_all_internal_addresses_once_before_resolving(): void {
+		$store  = new ArrayLinkStore();
+		$events = array();
+
+		$indexer = new Indexer(
+			$store,
+			self::HOST,
+			static function ( string $url ) use ( &$events ): int {
+				$events[] = 'resolve ' . $url;
+				return self::resolve( $url );
+			},
+			static function ( array $urls ) use ( &$events ): void {
+				$events[] = 'prime ' . implode( ' ', $urls );
+			}
+		);
+
+		$count = $indexer->index_many(
+			array(
+				1 => '<a href="/gajd-mag/">a</a> <a href="https://hsreplay.net/">b</a>',
+				2 => '<a href="/koloda-dk/">c</a> <a href="/gajd-mag/">d</a>',
+			)
+		);
+
+		self::assertSame( 4, $count );
+		self::assertSame( 'prime https://hs-manacost.ru/gajd-mag/ https://hs-manacost.ru/koloda-dk/', $events[0] );
+		self::assertCount( 1, array_filter( $events, static fn( string $event ): bool => str_starts_with( $event, 'prime' ) ) );
+		self::assertSame( array( 10 => 2, 20 => 1 ), $store->incoming( array( 10, 20 ) ) );
+	}
+
+	public function test_link_path_and_slug_match_how_wordpress_stores_post_names(): void {
+		self::assertSame( '/gajd-mag', PostPathResolver::path( 'https://hs-manacost.ru/gajd-mag/' ) );
+		self::assertSame( '/deck/blood-dk', PostPathResolver::path( 'https://hs-manacost.ru/deck/Blood-DK' ) );
+		self::assertSame( '/гайд', PostPathResolver::path( 'https://hs-manacost.ru/%D0%B3%D0%B0%D0%B9%D0%B4/' ) );
+		self::assertSame( '/', PostPathResolver::path( 'https://hs-manacost.ru/' ) );
+
+		self::assertSame( 'blood-dk', PostPathResolver::slug( '/deck/blood-dk' ) );
+		self::assertSame( '%d0%b3%d0%b0%d0%b9%d0%b4', PostPathResolver::slug( '/гайд' ) );
+		self::assertSame( '', PostPathResolver::slug( '/' ) );
 	}
 }
