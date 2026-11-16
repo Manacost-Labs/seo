@@ -46,9 +46,10 @@ interface Store {
 	 * @param int $limit  Сколько вернуть.
 	 * @param int $offset Сколько пропустить.
 	 * @param ?string $campaign Фильтр кампании.
+	 * @param ?string $search   Поиск по коду и адресу цели.
 	 * @return list<array<string, mixed>>
 	 */
-	public function all( int $limit, int $offset, ?string $campaign = null ): array;
+	public function all( int $limit, int $offset, ?string $campaign = null, ?string $search = null ): array;
 
 	/**
 	 * Число ссылок.

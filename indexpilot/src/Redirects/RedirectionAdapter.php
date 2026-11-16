@@ -89,6 +89,22 @@ final class RedirectionAdapter {
 	}
 
 	/**
+	 * Все строки таблицы Redirection для переноса: с шаблонами, выключенные, с ответами без перехода.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function rows(): array {
+		if ( ! $this->available() ) {
+			return array();
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- чужая таблица, разовое чтение при переносе.
+		$rows = $this->db->get_results( $this->db->prepare( 'SELECT id, url, regex, status, action_type, action_code, action_data, match_type, last_count FROM %i ORDER BY id ASC', $this->table() ), ARRAY_A );
+
+		return array_values( (array) $rows );
+	}
+
+	/**
 	 * Сколько включённых редиректов не учтено (регулярные выражения, условия, ответы без перехода).
 	 */
 	public function skipped(): int {

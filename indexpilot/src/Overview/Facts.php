@@ -12,7 +12,9 @@ namespace IndexPilot\Overview;
 use IndexPilot\Audit\Runner as AuditRunner;
 use IndexPilot\Links\Scanner as LinkScanner;
 use IndexPilot\Links\Schema as LinkSchema;
+use IndexPilot\Health\WpStore as HealthStore;
 use IndexPilot\Redirects\RedirectService;
+use IndexPilot\Redirects\WpNotFoundStore;
 
 /**
  * Собирает числа из уже готовых данных: таблиц аудита и ссылок, сохранённых состояний обходов и результатов
@@ -24,6 +26,11 @@ final class Facts {
 	 * Сколько непроверенных адресов сверяется с таблицей ссылок одним запросом.
 	 */
 	private const ADDRESS_LIMIT = 200;
+
+	/**
+	 * С какого числа обращений адрес из журнала 404 считается частым.
+	 */
+	public const FREQUENT_404 = 5;
 
 	/**
 	 * Конструктор.
@@ -79,7 +86,13 @@ final class Facts {
 			}
 		}
 
-		return $counts + $this->redirect_counts();
+		$health = ( new HealthStore( $this->db ) )->counts();
+
+		return $counts + $this->redirect_counts() + array(
+			'frequent_404'    => ( new WpNotFoundStore( $this->db ) )->count( self::FREQUENT_404 ),
+			'dead_outbound'   => $health['dead'],
+			'health_problems' => $health['problems'],
+		);
 	}
 
 	/**

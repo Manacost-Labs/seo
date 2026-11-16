@@ -41,7 +41,7 @@ final class ShortLinksPage {
 	 * @param ?\IndexPilot\ShortLinks\ClickLog $click_log Журнал переходов.
 	 * @param Router  $router  Адреса коротких ссылок.
 	 */
-	public function __construct( private Service $service, private Store $store, private Router $router, private ?\IndexPilot\ShortLinks\ClickLog $click_log = null ) {
+	public function __construct( private Service $service, private Store $store, private Router $router, private ?\IndexPilot\ShortLinks\ClickLog $click_log = null, private ?\IndexPilot\Health\WpStore $health = null ) {
 	}
 
 	/**
@@ -80,6 +80,11 @@ final class ShortLinksPage {
 			wp_enqueue_script( 'indexpilot-search', plugins_url( 'assets/js/search.js', INDEXPILOT_FILE ), array( 'wp-api-fetch' ), Plugin::VERSION, true );
 			wp_localize_script( 'indexpilot-search', 'IndexPilotSearch', array( 'copied' => __( 'Скопировано', 'indexpilot' ) ) );
 		}
+
+		if ( str_ends_with( (string) $hook, '_page_' . self::SLUG ) ) {
+			// Стили значков подсказки.
+			wp_enqueue_style( 'indexpilot-panel', plugins_url( 'assets/css/panel.css', INDEXPILOT_FILE ), array(), Plugin::VERSION );
+		}
 	}
 
 	/**
@@ -99,6 +104,30 @@ final class ShortLinksPage {
 		if ( 'delete' === $_POST['indexpilot_shortlink_action'] ) {
 			$this->store->delete( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0 );
 			$this->notice = array( __( 'Ссылка удалена.', 'indexpilot' ), 'success' );
+
+			return;
+		}
+
+		if ( 'bulk' === $_POST['indexpilot_shortlink_action'] ) {
+			$lines   = isset( $_POST['lines'] ) ? sanitize_textarea_field( wp_unslash( $_POST['lines'] ) ) : '';
+			$results = $this->service->create_many(
+				$lines,
+				isset( $_POST['code'] ) ? absint( wp_unslash( $_POST['code'] ) ) : 302,
+				isset( $_POST['campaign'] ) ? sanitize_text_field( wp_unslash( $_POST['campaign'] ) ) : ''
+			);
+			$created = array();
+			$failed  = array();
+
+			foreach ( $results as $item ) {
+				if ( is_array( $item['result'] ) ) {
+					$created[] = $this->router->url( (string) $item['result']['slug'] );
+				} else {
+					$failed[] = $item['line'] . ' — ' . $this->error_text( (string) $item['result'] );
+				}
+			}
+
+			/* translators: 1: сколько создано, 2: список адресов, 3: ошибки. */
+			$this->notice = array( sprintf( __( 'Создано ссылок: %1$d. %2$s %3$s', 'indexpilot' ), count( $created ), implode( ' ', $created ), array() === $failed ? '' : __( 'Не созданы:', 'indexpilot' ) . ' ' . implode( '; ', $failed ) ), array() === $failed ? 'success' : 'warning' );
 
 			return;
 		}
@@ -137,8 +166,11 @@ final class ShortLinksPage {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- фильтр только читает данные.
 		$campaign = isset( $_GET['campaign'] ) ? sanitize_text_field( wp_unslash( $_GET['campaign'] ) ) : '';
-		$links    = $this->store->all( self::PER_PAGE, 0, '' === $campaign ? null : $campaign );
-		$total    = $this->store->count();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- поиск только читает данные.
+		$search = isset( $_GET['q'] ) ? sanitize_text_field( wp_unslash( $_GET['q'] ) ) : '';
+		$links  = $this->store->all( self::PER_PAGE, 0, '' === $campaign ? null : $campaign, '' === $search ? null : $search );
+		$total  = $this->store->count();
+		$dead   = null === $this->health ? array() : $this->health->dead_urls( array_map( 'strval', array_column( $links, 'target' ) ) );
 		?>
 		<div class="wrap" data-indexpilot-shortlinks>
 			<h1><?php esc_html_e( 'IndexPilot — короткие ссылки', 'indexpilot' ); ?></h1>
@@ -199,6 +231,24 @@ final class ShortLinksPage {
 		<?php submit_button( __( 'Создать ссылку', 'indexpilot' ) ); ?>
 			</form>
 
+			<h2><?php esc_html_e( 'Много ссылок сразу', 'indexpilot' ); ?></h2>
+			<form method="post">
+				<?php wp_nonce_field( self::NONCE ); ?>
+				<input type="hidden" name="indexpilot_shortlink_action" value="bulk">
+				<p>
+					<label for="indexpilot-shortlink-lines"><?php esc_html_e( 'Адреса, по одному в строке', 'indexpilot' ); ?></label>
+					<?php \IndexPilot\Admin\HelpTip::render( __( 'в каждой строке — полный адрес, а через пробел можно указать свой код. Пример: «https://www.twitch.tv/manacost twitch». Без кода выдаётся случайный.', 'indexpilot' ), __( 'так за один раз делаются ссылки для всей рассылки или всех площадок стрима.', 'indexpilot' ) ); ?>
+				</p>
+				<textarea id="indexpilot-shortlink-lines" name="lines" rows="5" class="large-text code" placeholder="https://www.twitch.tv/manacost twitch"></textarea>
+				<p>
+					<label for="indexpilot-shortlink-bulk-campaign"><?php esc_html_e( 'Название кампании', 'indexpilot' ); ?></label>
+					<?php \IndexPilot\Admin\HelpTip::render( __( 'любое короткое название для всех ссылок пачки, например «стрим 20 ноября». Можно оставить пустым.', 'indexpilot' ), __( 'по кампании ссылки потом фильтруются в списке.', 'indexpilot' ) ); ?>
+					<input id="indexpilot-shortlink-bulk-campaign" name="campaign" type="text">
+					<input type="hidden" name="code" value="302">
+				</p>
+				<?php submit_button( __( 'Создать все', 'indexpilot' ), 'secondary' ); ?>
+			</form>
+
 			<h2>
 				<?php
 				/* translators: %d: число ссылок. */
@@ -212,6 +262,8 @@ final class ShortLinksPage {
 		<?php foreach ( $this->store->campaigns() as $name ) : ?>
 <option value="<?php echo esc_attr( $name ); ?>" <?php selected( $campaign, $name ); ?>><?php echo esc_html( $name ); ?></option>
 		<?php endforeach; ?></select>
+<label for="ip-search"><?php esc_html_e( 'Поиск', 'indexpilot' ); ?></label>
+<input id="ip-search" type="search" name="q" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'код или адрес', 'indexpilot' ); ?>">
 		<?php submit_button( __( 'Фильтровать', 'indexpilot' ), 'secondary', '', false ); ?>
 </form>
 		<?php $this->details(); ?>
@@ -238,6 +290,9 @@ final class ShortLinksPage {
 									<button type="button" class="button-link" data-indexpilot-copy="<?php echo esc_attr( $url ); ?>"><?php esc_html_e( 'скопировать', 'indexpilot' ); ?></button>
 								</td>
 								<td><?php echo esc_html( (string) $link['target'] ); ?>
+								<?php if ( isset( $dead[ (string) $link['target'] ] ) ) : ?>
+<br><strong class="indexpilot-dead-target" data-indexpilot-dead-target style="color:#b32d2e"><?php esc_html_e( 'Цель перестала открываться', 'indexpilot' ); ?></strong>
+								<?php endif; ?>
 <p><?php echo esc_html( (string) ( $link['campaign'] ?? '' ) ); ?></p>
 							<?php if ( ! empty( $link['expires_at'] ) && $link['expires_at'] < gmdate( 'Y-m-d' ) ) : ?>
 <strong><?php esc_html_e( 'Срок действия истёк', 'indexpilot' ); ?></strong>

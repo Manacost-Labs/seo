@@ -399,6 +399,150 @@ final class Commands {
 	}
 
 	/**
+	 * Работа со своими редиректами.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <action>
+	 * : Действие: import — перенести правила из плагина Redirection (повторный перенос ничего не дублирует).
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp indexpilot redirects import
+	 *
+	 * @param list<string> $args Позиционные аргументы.
+	 */
+	public function redirects( $args ): void {
+		if ( 'import' !== ( $args[0] ?? '' ) ) {
+			\WP_CLI::error( 'Неизвестное действие. Доступно: import.' );
+		}
+
+		\IndexPilot\Redirects\Schema::maybe_install( $this->plugin->db() );
+
+		$adapter = $this->plugin->redirects()->adapter();
+
+		if ( ! $adapter->available() ) {
+			\WP_CLI::error( 'Таблицы плагина Redirection на сайте нет.' );
+		}
+
+		$store  = $this->plugin->redirect_store();
+		$result = ( new \IndexPilot\Import\RedirectionImporter( $store, $this->plugin->redirect_manager() ) )->import( $adapter->rows() );
+
+		\WP_CLI::success(
+			sprintf(
+				'Перенесено правил: %d. Уже были: %d. Не переносятся (условия, случайная цель): %d. Цепочек схлопнуто: %d. Петель выключено: %d.',
+				$result['imported'],
+				$result['duplicates'],
+				$result['skipped'],
+				$result['collapsed'],
+				$result['loops']
+			)
+		);
+	}
+
+	/**
+	 * Самопроверка сайта и проверка внешних адресов.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <action>
+	 * : Действие: run — проверить все адреса из карты сайта; outbound — собрать и проверить внешние ссылки, картинки и ролики.
+	 *
+	 * [--limit=<number>]
+	 * : Для outbound: сколько адресов проверить. По умолчанию 100.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp indexpilot health run
+	 *     wp indexpilot health outbound --limit=300
+	 *
+	 * @param list<string>          $args       Позиционные аргументы.
+	 * @param array<string, string> $assoc_args Именованные аргументы.
+	 */
+	public function health( $args, $assoc_args ): void {
+		$health = $this->plugin->health();
+
+		\IndexPilot\Health\WpStore::maybe_install( $this->plugin->db() );
+
+		if ( 'run' === ( $args[0] ?? '' ) ) {
+			$check = $health->self_check();
+			$check->start( $health->sitemap_urls() );
+
+			do {
+				$result = $check->run_batch( 20 );
+				\WP_CLI::log( sprintf( 'Проверено %d из %d.', $result['cursor'], $result['total'] ) );
+				$this->free_memory();
+			} while ( ! $result['done'] );
+
+			\WP_CLI::success( 'Самопроверка закончена. Отчёт — в админке: IndexPilot → Техника → Самопроверка.' );
+
+			return;
+		}
+
+		if ( 'outbound' === ( $args[0] ?? '' ) ) {
+			do {
+				$collected = $health->collect_batch( 200 );
+				$this->free_memory();
+			} while ( ! $collected['done'] );
+
+			$checked = $health->outbound()->check_due( max( 1, (int) ( $assoc_args['limit'] ?? 100 ) ), time() );
+
+			\WP_CLI::success( sprintf( 'Проверено внешних адресов: %d.', $checked ) );
+
+			return;
+		}
+
+		\WP_CLI::error( 'Неизвестное действие. Доступно: run, outbound.' );
+	}
+
+	/**
+	 * Создаёт короткую ссылку.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <action>
+	 * : Действие: create.
+	 *
+	 * <target>
+	 * : Полный адрес, куда ведёт ссылка.
+	 *
+	 * [--slug=<slug>]
+	 * : Свой код ссылки. Без него выдаётся случайный.
+	 *
+	 * [--code=<code>]
+	 * : Код перенаправления: 302 (по умолчанию), 301 или 307.
+	 *
+	 * [--campaign=<name>]
+	 * : Название кампании.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp indexpilot shortlink create https://www.twitch.tv/manacost --slug=twitch
+	 *
+	 * @param list<string>          $args       Позиционные аргументы.
+	 * @param array<string, string> $assoc_args Именованные аргументы.
+	 */
+	public function shortlink( $args, $assoc_args ): void {
+		if ( 'create' !== ( $args[0] ?? '' ) || '' === (string) ( $args[1] ?? '' ) ) {
+			\WP_CLI::error( 'Использование: wp indexpilot shortlink create <адрес> [--slug=<код>] [--code=302] [--campaign=<название>].' );
+		}
+
+		if ( ! $this->plugin->settings()->general( 'shortlinks_enabled' ) ) {
+			\WP_CLI::error( 'Короткие ссылки выключены в настройках.' );
+		}
+
+		( new \IndexPilot\ShortLinks\WpStore( $this->plugin->db() ) )->maybe_install();
+
+		$result = $this->plugin->shortlinks()->create( (string) $args[1], (string) ( $assoc_args['slug'] ?? '' ), (int) ( $assoc_args['code'] ?? 302 ), array(), (string) ( $assoc_args['campaign'] ?? '' ) );
+
+		if ( is_string( $result ) ) {
+			\WP_CLI::error( $result );
+		}
+
+		\WP_CLI::success( $this->plugin->shortlink_router()->url( (string) $result['slug'] ) );
+	}
+
+	/**
 	 * Освобождает память между пачками: без этого долгий проход копит записи в кэше объектов.
 	 */
 	private function free_memory(): void {

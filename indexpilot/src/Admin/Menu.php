@@ -36,7 +36,7 @@ final class Menu {
 		),
 		array(
 			'tech',
-			array( RedirectsReport::SLUG, SearchEnginesPage::SLUG, ShortLinksPage::SLUG ),
+			array( RedirectsPage::SLUG, NotFoundPage::SLUG, RedirectsReport::SLUG, HealthPage::SLUG, SearchEnginesPage::SLUG, ShortLinksPage::SLUG ),
 		),
 		SettingsPage::SLUG,
 		ImportPage::SLUG,

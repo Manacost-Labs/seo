@@ -48,7 +48,7 @@ final class RedirectsReport {
 		add_submenu_page(
 			SettingsPage::SLUG,
 			__( 'IndexPilot — редиректы', 'indexpilot' ),
-			__( 'Редиректы', 'indexpilot' ),
+			__( 'Проверка редиректов', 'indexpilot' ),
 			'manage_options',
 			self::SLUG,
 			array( $this, 'render' )
@@ -150,7 +150,7 @@ final class RedirectsReport {
 		echo '<h1>' . esc_html__( 'IndexPilot — редиректы', 'indexpilot' ) . '</h1>';
 
 		if ( ! $this->service->available() ) {
-			echo '<p>' . esc_html__( 'Плагин Redirection не установлен: редиректов для проверки нет.', 'indexpilot' ) . '</p></div>';
+			echo '<p>' . esc_html__( 'Редиректов для проверки нет: своих правил ещё не добавлено, плагина Redirection нет.', 'indexpilot' ) . '</p></div>';
 
 			return;
 		}
@@ -158,7 +158,7 @@ final class RedirectsReport {
 		$data = $this->data();
 		?>
 		<p>
-			<?php esc_html_e( 'Редиректами управляет плагин Redirection. Здесь показано, что в них стоит поправить; сам отчёт ничего не меняет.', 'indexpilot' ); ?>
+			<?php esc_html_e( 'Здесь проверяются свои редиректы и правила плагина Redirection (пока он включён): цепочки, петли и цели, которые не открываются. Сам отчёт ничего не меняет — правила правятся на вкладке «Редиректы».', 'indexpilot' ); ?>
 		</p>
 		<ul class="ul-disc">
 			<li>

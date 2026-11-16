@@ -69,6 +69,12 @@ final class OverviewPage {
 			'broken_links'           => array( __( 'Битых внутренних ссылок: %d', 'indexpilot' ), __( 'Ссылки ведут на снятые с публикации записи или на адреса, которые не открываются.', 'indexpilot' ), LinksReport::SLUG, '' ),
 			/* translators: %d: число редиректов. */
 			'dead_redirects'         => array( __( 'Редиректов, цель которых не открывается: %d', 'indexpilot' ), __( 'Посетитель и поисковик попадают на страницу с ошибкой.', 'indexpilot' ), RedirectsReport::SLUG, '' ),
+			/* translators: %d: число адресов. */
+			'frequent_404'           => array( __( 'Частых адресов «не найдено» (404): %d', 'indexpilot' ), __( 'По этим адресам приходят снова и снова: поставьте редирект на похожую страницу.', 'indexpilot' ), NotFoundPage::SLUG, '' ),
+			/* translators: %d: число адресов. */
+			'dead_outbound'          => array( __( 'Мёртвых ссылок наружу, картинок и роликов: %d', 'indexpilot' ), __( 'Ссылка, картинка или ролик в тексте не открывается три проверки подряд.', 'indexpilot' ), HealthPage::SLUG, '' ),
+			/* translators: %d: число страниц. */
+			'health_problems'        => array( __( 'Страниц с проблемами по самопроверке: %d', 'indexpilot' ), __( 'Страница из карты сайта отвечает ошибкой, перенаправляет, долго открывается, почти пуста или архив выводит записи целиком.', 'indexpilot' ), HealthPage::SLUG, '' ),
 			/* translators: %d: число страниц. */
 			'duplicate_titles'       => array( __( 'Страниц с повторяющимся заголовком: %d', 'indexpilot' ), __( 'Поисковик не понимает, какую из одинаково названных страниц показывать.', 'indexpilot' ), AuditReport::SLUG, 'duplicate_title_hash' ),
 			/* translators: %d: число страниц. */
