@@ -61,6 +61,11 @@ final class Games {
 		}
 		return $this->lexicons[ $slug ];
 	}
+	/** Игра сайта по умолчанию: к ней относится всё вне разделов других игр.
+	 * @return string
+	 */
+	public function default_game(): string {
+		return $this->default; }
 	/** Возвращает игры.
 	 * @return array
 	 */
@@ -76,14 +81,18 @@ final class Games {
 				'name'          => 'Hearthstone',
 				'root_term_ids' => array(),
 				'schema_name'   => 'Hearthstone',
+				'aliases'       => array( 'HS', 'ХС' ),
 				'lexicon'       => Lexicon::class,
+				'material'      => MaterialType::class,
 			),
 			array(
 				'slug'          => 'wow',
 				'name'          => 'World of Warcraft',
 				'root_term_ids' => array(),
 				'schema_name'   => 'World of Warcraft',
+				'aliases'       => array( 'WoW', 'ВоВ' ),
 				'lexicon'       => Lexicons\Wow::class,
+				'material'      => WowMaterialType::class,
 			),
 		);
 	}

@@ -66,6 +66,7 @@ json_check promo-check.php
 json_check content-check.php
 json_check answers-check.php
 json_check searchdata-check.php
+json_check wow-check.php
 json_check doctor-check.php
 json_check twins-check.php
 

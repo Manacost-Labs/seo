@@ -15,6 +15,7 @@ use IndexPilot\Resolver\Context;
 use IndexPilot\Resolver\PostDates;
 use IndexPilot\Schema\Graph;
 use IndexPilot\Schema\IdFactory;
+use IndexPilot\Settings\Settings;
 use IndexPilot\Site\SiteProfile;
 use IndexPilot\Sitemap\EntryPolicy;
 use IndexPilot\Variables\VariableRegistry;
@@ -54,6 +55,13 @@ final class Module {
 	private ?Hub $hub = null;
 
 	/**
+	 * Игры сайта: раздел World of Warcraft и игра записей.
+	 *
+	 * @var SiteGames|null
+	 */
+	private ?SiteGames $games = null;
+
+	/**
 	 * Упоминания классов и архетипов.
 	 *
 	 * @var MentionIndex|null
@@ -72,6 +80,10 @@ final class Module {
 	 * Подключает модуль. Вызывается до первого обращения к переменным шаблонов.
 	 */
 	public function register(): void {
+		// Игры сайта подключаются первыми: им нужна своя переменная %game% и игра записи до остальных обработчиков.
+		$this->games()->register();
+		( new GuideHub( $this->games(), $this->plugin->settings() ) )->register();
+
 		add_action(
 			'indexpilot_register_variables',
 			function ( VariableRegistry $registry ): void {
@@ -118,11 +130,22 @@ final class Module {
 	}
 
 	/**
+	 * Игры сайта: игра записи и рубрики, словари и патчи игр.
+	 */
+	public function games(): SiteGames {
+		if ( null === $this->games ) {
+			$this->games = new SiteGames( fn(): Settings => $this->plugin->settings(), fn(): Lexicon => $this->plugin->lexicon() );
+		}
+
+		return $this->games;
+	}
+
+	/**
 	 * Упоминания классов и архетипов в записях.
 	 */
 	public function mention_index(): MentionIndex {
 		if ( null === $this->mention_index ) {
-			$this->mention_index = new MentionIndex( fn(): Lexicon => $this->plugin->lexicon() );
+			$this->mention_index = new MentionIndex( fn(): Lexicon => $this->plugin->lexicon(), fn(): SiteGames => $this->games() );
 		}
 
 		return $this->mention_index;
@@ -142,7 +165,10 @@ final class Module {
 	 * @param Patch|null $patch Патч; null — из настроек.
 	 */
 	public function outdated( \WP_Post $post, ?Patch $patch = null ): bool {
-		$patch = $patch ?? $this->patch();
+		$game = $this->games()->post_game( $post );
+
+		// Запись другой игры сверяется с патчем своей игры.
+		$patch = SiteGames::DEFAULT_GAME !== $game ? $this->games()->patch( $game ) : ( $patch ?? $this->patch() );
 
 		if ( ! $patch->active() || 'publish' !== $post->post_status ) {
 			return false;
@@ -165,7 +191,7 @@ final class Module {
 			return;
 		}
 
-		$patch = $this->patch();
+		$patch = $this->games()->patch( $this->games()->post_game( $post ) );
 
 		if ( ! $this->outdated( $post, $patch ) ) {
 			return;
@@ -190,8 +216,9 @@ final class Module {
 			return;
 		}
 
-		$own     = 'publish' === $post->post_status ? (string) get_permalink( $post ) : '';
-		$missing = Mentions::unlinked( $this->mention_index()->mentions()->find( MentionIndex::text( $post ) ), (string) $post->post_content, $own );
+		$own = 'publish' === $post->post_status ? (string) get_permalink( $post ) : '';
+		// Классы ищутся словарём игры записи и ведут на страницы классов той же игры.
+		$missing = Mentions::unlinked( $this->mention_index()->mentions_for( $this->games()->post_game( $post ) )->find( MentionIndex::text( $post ) ), (string) $post->post_content, $own );
 
 		if ( array() === $missing ) {
 			return;

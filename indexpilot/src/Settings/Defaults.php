@@ -71,6 +71,13 @@ final class Defaults {
 			// Текущий патч игры: номер и дата выхода (ГГГГ-ММ-ДД). Гайды и колоды, не обновлённые с этой даты, устарели.
 			'patch_version'            => '',
 			'patch_date'               => '',
+			// World of Warcraft: корневая рубрика раздела (0 — раздела нет), патч, название в разметке, шаблоны рубрик.
+			'wow_root_term'            => 0,
+			'wow_patch_version'        => '',
+			'wow_patch_date'           => '',
+			'wow_schema_name'          => 'World of Warcraft',
+			'wow_term_title'           => '{{%parent_term% }}%term% %sep% гайды %game% %sep% %page% %sep% %sitename%',
+			'wow_term_description'     => '{{%parent_term% }}%term% в %game%: гайды, таланты, ротация и экипировка на сайте %sitename%.',
 			// Отдавать любую открытую запись чистым Markdown по адресу с «.md» на конце.
 			'llms_markdown'            => true,
 			'delete_data_on_uninstall' => false,

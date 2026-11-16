@@ -13,7 +13,6 @@ use IndexPilot\Analysis\PaperExtras;
 use IndexPilot\Frontend\AnswerBlock;
 use IndexPilot\Frontend\FactBlocks;
 use IndexPilot\Frontend\FaqBlock;
-use IndexPilot\Game\MaterialType;
 use IndexPilot\Game\PostMaterial;
 use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Plugin;
@@ -293,7 +292,7 @@ final class ClassicMetabox {
 					<strong data-indexpilot-material>
 						<?php
 						/* translators: %s: тип материала, например «Гайд по архетипу». */
-						echo esc_html( sprintf( __( 'Тип материала: %s', 'indexpilot' ), MaterialType::label( PostMaterial::detect( $post ) ) ) );
+						echo esc_html( sprintf( __( 'Тип материала: %s', 'indexpilot' ), PostMaterial::label( $post ) ) );
 						?>
 					</strong>
 					<?php HelpTip::render( __( 'ничего — тип определяется сам по названию, рубрикам и подзаголовкам статьи.', 'indexpilot' ), __( 'от типа зависит, каких разделов плагин ждёт в тексте (у гайда: состав колоды, муллиган, стратегия, матчапы, замены), и как статья помечается для поисковиков, если на вкладке «Содержание» выбрано «Авто».', 'indexpilot' ) ); ?>

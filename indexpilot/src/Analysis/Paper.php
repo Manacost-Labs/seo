@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Analysis;
 
+use IndexPilot\Game\MaterialType;
+
 /**
  * Всё, что анализатор знает о странице. Объект не зависит от WordPress: его собирают редактор, импорт и WP-CLI.
  */
@@ -46,6 +48,9 @@ final class Paper {
 	 * @param list<string> $own_hosts          Хосты своих площадок и сайтов: ссылки на них рекламой не считаются.
 	 * @param array<int, int> $image_bytes     Вес картинок медиатеки в байтах: ID вложения => размер файла, который выводится в тексте.
 	 * @param array{width: int, height: int}|array{}|null $featured_image Размеры миниатюры записи; пустой массив — миниатюры нет; null — не проверять.
+	 * @param string       $material_types     Класс типов материалов игры записи: MaterialType или WowMaterialType.
+	 * @param string       $game               Игра записи; пусто — не определялась (словарь игры сайта по умолчанию).
+	 * @param list<string> $missing_game_names Названия игры, которых не хватает в заголовке о классе, общем для двух игр.
 	 */
 	public function __construct(
 		public string $title = '',
@@ -76,7 +81,10 @@ final class Paper {
 		public bool $sponsored = false,
 		public array $own_hosts = array(),
 		public array $image_bytes = array(),
-		public ?array $featured_image = null
+		public ?array $featured_image = null,
+		public string $material_types = MaterialType::class,
+		public string $game = '',
+		public array $missing_game_names = array()
 	) {
 	}
 }

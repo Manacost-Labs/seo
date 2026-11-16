@@ -31,4 +31,9 @@ interface GameLexicon {
 	/** Обрабатывает игровые названия.
 	 */
 	public function class_slugs(): array;
+	/** Слова текста, в которых синонимы и разговорные имена заменены каноническими словами.
+	 * @param string $text Значение.
+	 * @return list<string>
+	 */
+	public function canonical_words( string $text ): array;
 }

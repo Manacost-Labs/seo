@@ -9,8 +9,8 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Frontend;
 
-use IndexPilot\Game\Patch;
 use IndexPilot\Game\PostMaterial;
+use IndexPilot\Game\SiteGames;
 use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Resolver\PostDates;
 use IndexPilot\Promo\Blocks;
@@ -227,7 +227,8 @@ final class AnswerBlock {
 	 * @param int $post_id ID записи.
 	 */
 	private function updated_label( int $post_id ): string {
-		$patch = new Patch( (string) $this->settings->general( 'patch_version' ), (string) $this->settings->general( 'patch_date' ) );
+		// Запись раздела другой игры сверяется с патчем своей игры; поле игры читается из кэша полей записи.
+		$patch = SiteGames::patch_for( $this->settings, (string) get_post_meta( $post_id, SiteGames::META, true ) );
 		$post  = get_post( $post_id );
 
 		if ( $patch->active() && $post instanceof \WP_Post && $patch->current( PostMaterial::detect( $post ), PostDates::modified( 'Y-m-d H:i:s', false, $post ) ) ) {

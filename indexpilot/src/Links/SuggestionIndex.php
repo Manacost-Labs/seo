@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Links;
 
+use IndexPilot\Game\SiteGames;
 use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Redirects\RedirectedPosts;
 
@@ -29,14 +30,23 @@ final class SuggestionIndex {
 	 * @param Suggester       $suggester  Подбор по основам слов.
 	 * @param RedirectedPosts $redirected Записи под редиректом.
 	 * @param string          $signature  Отпечаток игрового словаря: индекс, построенный с другим словарём, не годится.
+	 * @param SiteGames|null  $games      Игры сайта: подсказки — только на страницы игры записи; null — без разделения.
 	 */
 	public function __construct(
 		private \wpdb $db,
 		private Suggester $suggester,
 		private RedirectedPosts $redirected,
-		private string $signature = ''
+		private string $signature = '',
+		private ?SiteGames $games = null
 	) {
 	}
+
+	/**
+	 * Игры страниц индекса.
+	 *
+	 * @var array<string, string>
+	 */
+	private array $page_games = array();
 
 	/**
 	 * Страницы, на которые стоит сослаться из текста.
@@ -59,7 +69,10 @@ final class SuggestionIndex {
 
 		$suggestions = array();
 
-		foreach ( $this->suggester->suggest( $this->index(), $html, array( 'p' . $post_id ), $limit * 3 ) as $item ) {
+		// Запись о World of Warcraft получает подсказки только на страницы своей игры, и наоборот.
+		$game = null !== $this->games && $this->games->active() && $post_id > 0 ? $this->games->post_game( $post_id ) : '';
+
+		foreach ( $this->suggester->suggest( $this->index(), $html, array( 'p' . $post_id ), $limit * 3, $game ) as $item ) {
 			$object_id = (int) substr( $item['id'], 1 );
 			$url       = 'p' === $item['id'][0] ? get_permalink( $object_id ) : get_term_link( $object_id );
 
@@ -93,7 +106,7 @@ final class SuggestionIndex {
 			return $saved['index'];
 		}
 
-		$index = $this->suggester->build( $this->titles() );
+		$index = $this->suggester->build( $this->titles(), $this->page_games );
 
 		update_option(
 			self::OPTION,
@@ -138,10 +151,11 @@ final class SuggestionIndex {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- два столбца по всем записям; результат кэшируется в опции.
 			$rows = $this->db->get_results(
 				$this->db->prepare(
-					"SELECT p.ID, p.post_title FROM {$this->db->posts} p
+					"SELECT p.ID, p.post_title, g.meta_value AS game FROM {$this->db->posts} p
 					LEFT JOIN {$this->db->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s AND m.meta_value = '1'
+					LEFT JOIN {$this->db->postmeta} g ON g.post_id = p.ID AND g.meta_key = %s
 					WHERE p.post_status = 'publish' AND p.post_password = '' AND p.post_type IN ( {$placeholders} ) AND m.meta_id IS NULL",
-					array_merge( array( MetaKeys::NOINDEX ), $types )
+					array_merge( array( MetaKeys::NOINDEX, SiteGames::META ), $types )
 				),
 				ARRAY_A
 			);
@@ -152,6 +166,9 @@ final class SuggestionIndex {
 			foreach ( (array) $rows as $row ) {
 				if ( ! isset( $redirected[ (int) $row['ID'] ] ) ) {
 					$titles[ 'p' . (int) $row['ID'] ] = wp_strip_all_tags( (string) $row['post_title'] );
+
+					// Запись без поля игры относится к игре сайта по умолчанию.
+					$this->page_games[ 'p' . (int) $row['ID'] ] = '' !== (string) ( $row['game'] ?? '' ) ? (string) $row['game'] : SiteGames::DEFAULT_GAME;
 				}
 			}
 		}
@@ -166,7 +183,8 @@ final class SuggestionIndex {
 
 			foreach ( is_array( $terms ) ? $terms : array() as $term ) {
 				if ( '1' !== (string) get_term_meta( $term->term_id, MetaKeys::NOINDEX, true ) ) {
-					$titles[ 't' . (int) $term->term_id ] = (string) $term->name;
+					$titles[ 't' . (int) $term->term_id ]           = (string) $term->name;
+					$this->page_games[ 't' . (int) $term->term_id ] = null !== $this->games ? $this->games->term_game( (int) $term->term_id, $taxonomy ) : SiteGames::DEFAULT_GAME;
 				}
 			}
 		}

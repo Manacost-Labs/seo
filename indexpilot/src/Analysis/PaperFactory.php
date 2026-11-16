@@ -12,8 +12,10 @@ namespace IndexPilot\Analysis;
 use IndexPilot\Authors\AuthorData;
 use IndexPilot\Authors\AuthorProfile;
 use IndexPilot\CrossSite\PartnerClient;
+use IndexPilot\Game\GameScope;
 use IndexPilot\Game\MaterialType;
 use IndexPilot\Game\PostMaterial;
+use IndexPilot\Game\SiteGames;
 use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Redirects\LinkAudit;
 use IndexPilot\Redirects\RedirectedPosts;
@@ -45,6 +47,7 @@ final class PaperFactory {
 	 * @param AuthorProfile|null   $profiles         Профили авторов.
 	 * @param PartnerClient|null   $partner          Запрос ключей второго сайта.
 	 * @param KeywordUsage|null    $usage            Поиск страниц с тем же ключом; null — проверки занятого ключа нет.
+	 * @param SiteGames|null       $games            Игры сайта: ключ, словарь и типы материалов — в пределах игры записи.
 	 */
 	public function __construct(
 		private MetaResolver $resolver,
@@ -53,7 +56,8 @@ final class PaperFactory {
 		private ?RedirectedPosts $redirected_posts = null,
 		private ?AuthorProfile $profiles = null,
 		private ?PartnerClient $partner = null,
-		private ?KeywordUsage $usage = null
+		private ?KeywordUsage $usage = null,
+		private ?SiteGames $games = null
 	) {
 	}
 
@@ -102,6 +106,8 @@ final class PaperFactory {
 		$post     = $is_post ? get_post( $context->object_id ) : null;
 		$title    = $context->override( 'title' );
 		$material = $post instanceof \WP_Post ? PostMaterial::detect( $post, is_string( $title ) ? $title : null, $content ) : '';
+		$game     = $post instanceof \WP_Post && null !== $this->games ? $this->games->post_game( $post ) : '';
+		$missing  = '' !== $game && null !== $this->games ? GameScope::missing_names( $meta->title, $game, $this->games->registry() ) : array();
 
 		$author_profile = null;
 		$author_id      = $is_post ? (int) get_post_field( 'post_author', $context->object_id ) : 0;
@@ -122,7 +128,7 @@ final class PaperFactory {
 			keywords: array_slice( $meta->keywords, 1 ),
 			site_host: (string) wp_parse_url( home_url(), PHP_URL_HOST ),
 			min_words: $is_post ? (int) $this->settings->post_type( $context->subtype )['min_words'] : 0,
-			duplicates: $this->duplicates( $context, $keyword ),
+			duplicates: $this->duplicates( $context, $keyword, $game ),
 			title_px: (int) ( $context->override( 'title_px' ) ?? 0 ),
 			title_max_px: (int) $this->settings->general( 'title_max_px' ),
 			description_min: (int) $this->settings->general( 'description_min' ),
@@ -144,7 +150,10 @@ final class PaperFactory {
 			// Свои площадки и второй сайт нужны только проверке рекламных ссылок.
 			own_hosts: $sponsored ? PaperExtras::own_hosts( (string) $this->settings->general( 'partner_site_url' ) ) : array(),
 			image_bytes: PaperExtras::image_bytes( $content ),
-			featured_image: $is_post && post_type_supports( $context->subtype, 'thumbnail' ) ? PaperExtras::featured_image( $context->object_id ) : null
+			featured_image: $is_post && post_type_supports( $context->subtype, 'thumbnail' ) ? PaperExtras::featured_image( $context->object_id ) : null,
+			material_types: $post instanceof \WP_Post ? PostMaterial::types( $post ) : MaterialType::class,
+			game: $game,
+			missing_game_names: $missing
 		);
 	}
 
@@ -216,20 +225,25 @@ final class PaperFactory {
 	 *
 	 * @param Context $context Контекст страницы.
 	 * @param string  $keyword Основной ключ.
+	 * @param string  $game    Игра записи: записи других игр ключ не занимают; пусто — все игры.
 	 * @return list<string>
 	 */
-	private function duplicates( Context $context, string $keyword ): array {
+	private function duplicates( Context $context, string $keyword, string $game = '' ): array {
 		if ( '' === $keyword ) {
 			return array();
 		}
 
-		if ( null === $this->usage ) {
-			global $wpdb;
+		global $wpdb;
 
+		if ( null === $this->usage ) {
 			$this->usage = new KeywordUsage( $wpdb, ( new Analyzer() )->matcher() );
 		}
 
-		$post_ids = $this->usage->posts( $keyword, Context::POST === $context->type ? $context->object_id : 0, self::MAX_DUPLICATES );
+		// Ключ записи другой игры сравнивается её словарём: «шп» в World of Warcraft — жрец тьмы.
+		$usage = null !== $this->games && '' !== $game && SiteGames::DEFAULT_GAME !== $game ? new KeywordUsage( $wpdb, $this->games->matcher( $game ) ) : $this->usage;
+		$all   = null === $this->games || ! $this->games->active();
+
+		$post_ids = $usage->posts( $keyword, Context::POST === $context->type ? $context->object_id : 0, self::MAX_DUPLICATES, false, $all ? '' : $game, SiteGames::DEFAULT_GAME );
 
 		return array_map( static fn( int $post_id ): string => (string) get_the_title( $post_id ), $post_ids );
 	}

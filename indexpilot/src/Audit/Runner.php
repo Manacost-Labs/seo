@@ -9,8 +9,11 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Audit;
 
+use IndexPilot\Game\GameScope;
 use IndexPilot\Game\MaterialType;
 use IndexPilot\Game\PostMaterial;
+use IndexPilot\Game\SiteGames;
+use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Resolver\Context;
 use IndexPilot\Resolver\MetaResolver;
 use IndexPilot\Settings\Settings;
@@ -351,6 +354,31 @@ final class Runner {
 				'fingerprint' => Fingerprints::for_post( $post->post_content, $is_deck ),
 			) + $facts
 		);
+	}
+
+	/**
+	 * Одинаковые основные ключи у опубликованных записей разных игр: «гайд на жреца» в Hearthstone и в WoW.
+	 * Такие записи не мешают друг другу в проверке занятого ключа, но в выдаче спорят за один запрос —
+	 * в заголовках стоит назвать игру.
+	 *
+	 * @return list<array{keyword: string, posts: list<int>}>
+	 */
+	public function cross_game_keywords(): array {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- отчёт в админке; три столбца по индексу ключа меты.
+		$rows = $this->db->get_results(
+			$this->db->prepare(
+				"SELECT m.post_id, m.meta_value AS keyword, g.meta_value AS game FROM {$this->db->postmeta} m
+				JOIN {$this->db->posts} p ON p.ID = m.post_id
+				LEFT JOIN {$this->db->postmeta} g ON g.post_id = m.post_id AND g.meta_key = %s
+				WHERE m.meta_key = %s AND m.meta_value <> '' AND p.post_status = 'publish'
+				ORDER BY m.post_id ASC LIMIT 5000",
+				SiteGames::META,
+				MetaKeys::FOCUS_KEYWORD
+			),
+			ARRAY_A
+		);
+
+		return GameScope::cross_game_groups( (array) $rows, SiteGames::DEFAULT_GAME );
 	}
 
 	/**

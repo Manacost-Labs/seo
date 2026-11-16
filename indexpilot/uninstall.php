@@ -41,6 +41,9 @@ wp_clear_scheduled_hook( 'indexpilot_mention_index_rebuild' );
 delete_post_meta_by_key( '_indexpilot_mentions' );
 delete_metadata( 'term', 0, '_indexpilot_hub', '', true );
 wp_clear_scheduled_hook( 'indexpilot_deck_versions_rebuild' );
+// Игра записей (раздел World of Warcraft).
+delete_post_meta_by_key( '_indexpilot_game' );
+wp_clear_scheduled_hook( 'indexpilot_games_rebuild' );
 delete_option( 'indexpilot_audit_db_version' );
 delete_option( 'indexpilot_shortlinks_db_version' );
 delete_option( 'indexpilot_db_version' );

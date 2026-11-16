@@ -83,6 +83,7 @@ final class AuditReport {
 			'duplicate_title_hash'       => array( __( 'Одинаковые заголовки', 'indexpilot' ), __( 'У нескольких открытых страниц один и тот же заголовок: поисковик не понимает, какую показывать.', 'indexpilot' ) ),
 			'duplicate_description_hash' => array( __( 'Одинаковые описания', 'indexpilot' ), __( 'У нескольких открытых страниц одно и то же описание.', 'indexpilot' ) ),
 			'near_duplicates'            => array( __( 'Похожие тексты', 'indexpilot' ), __( 'Пары записей, у которых основной текст почти совпадает, даже если заголовки разные. Поисковик покажет только одну из них — объедините их или перепишите одну. Считаются пары; колоды и тексты короче 50 слов не сравниваются.', 'indexpilot' ) ),
+			'game_keywords'              => array( __( 'Одинаковые ключи в разных играх', 'indexpilot' ), __( 'Записи о Hearthstone и о World of Warcraft с одним и тем же основным ключом («гайд на жреца»). Друг другу они ключ не занимают, но в выдаче спорят за один запрос: назовите игру в заголовке и ключе.', 'indexpilot' ) ),
 			'no_description'             => array( __( 'Нет описания', 'indexpilot' ), __( 'Описание пустое: его не из чего собрать.', 'indexpilot' ) ),
 			'auto_description'           => array( __( 'Описание собрано автоматически', 'indexpilot' ), __( 'Описание взято из начала текста. Написанное вручную обычно привлекает больше переходов.', 'indexpilot' ) ),
 			'h1'                         => array( __( 'Лишние заголовки H1', 'indexpilot' ), __( 'В тексте записи есть заголовки H1, хотя H1 — это её название.', 'indexpilot' ) ),
@@ -139,6 +140,8 @@ final class AuditReport {
 			$similar = $this->runner->near_duplicates();
 
 			$summary['near_duplicates'] = count( $similar );
+			$cross_game                 = $this->runner->cross_game_keywords();
+			$summary['game_keywords']   = count( $cross_game );
 			?>
 			<table class="widefat striped" style="max-width:900px">
 				<thead>
@@ -166,6 +169,15 @@ final class AuditReport {
 
 				if ( 'near_duplicates' === $view ) {
 					$this->render_pairs( $similar );
+				} elseif ( 'game_keywords' === $view ) {
+					foreach ( $cross_game as $group ) {
+						echo '<h3>' . esc_html( $group['keyword'] ) . '</h3>';
+						$this->render_posts( array_slice( $group['posts'], 0, 20 ) );
+					}
+
+					if ( array() === $cross_game ) {
+						echo '<p>' . esc_html__( 'Повторов нет.', 'indexpilot' ) . '</p>';
+					}
 				} elseif ( str_starts_with( $view, 'duplicate_' ) ) {
 					$this->render_groups( $this->runner->duplicate_groups( substr( $view, 10 ) ) );
 				} else {

@@ -33,6 +33,9 @@ final class MaterialChecks implements CheckGroup {
 		MaterialType::META      => 'В мета-отчёте',
 		MaterialType::TIER_LIST => 'В тир-листе',
 		MaterialType::PATCH     => 'В материале о патче',
+		// Только World of Warcraft.
+		'boss'                  => 'В тактике на босса',
+		'dungeon'               => 'В маршруте подземелья',
 	);
 
 	/**
@@ -50,8 +53,10 @@ final class MaterialChecks implements CheckGroup {
 			return array();
 		}
 
-		$expected = MaterialType::expected_sections( $paper->material );
-		$missing  = MaterialType::missing_sections( $paper->material, $paper->content );
+		// У каждой игры свои ожидаемые разделы: в гайде World of Warcraft — таланты и ротация, а не муллиган.
+		$types    = class_exists( $paper->material_types ) ? $paper->material_types : MaterialType::class;
+		$expected = $types::expected_sections( $paper->material );
+		$missing  = $types::missing_sections( $paper->material, $paper->content );
 		$where    = self::WHERE[ $paper->material ];
 
 		if ( array() === $missing ) {

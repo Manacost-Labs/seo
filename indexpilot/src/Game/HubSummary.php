@@ -47,7 +47,29 @@ final class HubSummary {
 		'shaman'       => 'шамана',
 		'warlock'      => 'чернокнижника',
 		'warrior'      => 'воина',
+		// Классы World of Warcraft, которых нет в Hearthstone.
+		'monk'         => 'монаха',
+		'evoker'       => 'пробудителя',
 	);
+
+	/**
+	 * Шаблон фразы-ответа раздела без колод (World of Warcraft): раздел в родительном падеже, дата, гайд.
+	 */
+	public const GUIDE_WORDS = 'Свежий гайд для %1$s на %2$s — %3$s.';
+
+	/**
+	 * Фраза-ответ раздела, собранная из гайдов: самый свежий гайд. Пусто — гайдов нет.
+	 *
+	 * @param list<array{title: string, url: string}> $guides  Гайды, свежие первыми.
+	 * @param string                                  $subject Раздел в родительном падеже: «жреца».
+	 * @param string                                  $date    Дата для фразы.
+	 * @param string                                  $words   Шаблон фразы.
+	 */
+	public static function guide_answer( array $guides, string $subject, string $date, string $words = self::GUIDE_WORDS ): string {
+		$title = trim( (string) ( $guides[0]['title'] ?? '' ) );
+
+		return '' === $title ? '' : sprintf( $words, $subject, $date, $title );
+	}
 
 	/**
 	 * Лучшие актуальные колоды: архивные убираются; сначала колоды с достаточным числом игр по проценту побед,

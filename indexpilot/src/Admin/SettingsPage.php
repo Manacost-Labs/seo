@@ -116,7 +116,7 @@ final class SettingsPage {
 			$input['general']['patch_date'] = Patch::normalize_date( (string) $input['general']['patch_date'] );
 		}
 
-		return Settings::changes( $input, $this->site, $this->names() );
+		return Settings::changes( GameSettings::sanitize( $input ), $this->site, $this->names() );
 	}
 
 	/**
@@ -228,6 +228,8 @@ final class SettingsPage {
 					$this->textarea( 'custom_synonyms', __( 'Свои синонимы', 'indexpilot' ), __( 'По строке на группу: слово, знак «=», синонимы через запятую. Например: колода = дека, сборка', 'indexpilot' ) );
 					?>
 				</table>
+
+				<?php GameSettings::render( $this->settings ); ?>
 
 				<h2><?php esc_html_e( 'Короткие ссылки', 'indexpilot' ); ?></h2>
 				<table class="form-table" role="presentation">
