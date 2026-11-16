@@ -40,7 +40,7 @@ cd indexpilot
 composer install
 composer test    # PHPUnit
 composer lint    # WordPress Coding Standards
-node --test tests/js
+node --test tests/js/*.test.js
 ```
 
 Проверки внутри настоящего WordPress — [WordPress Playground](https://github.com/WordPress/wordpress-playground) (CLI 3.1.64):
