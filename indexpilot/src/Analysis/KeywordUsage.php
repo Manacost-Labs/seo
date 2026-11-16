@@ -24,6 +24,20 @@ final class KeywordUsage {
 	private const SCAN_LIMIT = 5000;
 
 	/**
+	 * Ключи опубликованных записей, прочитанные в этом запросе; null — ещё не читались.
+	 *
+	 * @var array<int, array{keyword: string, protected: bool}>|null
+	 */
+	private static ?array $known = null;
+
+	/**
+	 * Подключены ли хуки, которые держат список в актуальном виде.
+	 *
+	 * @var bool
+	 */
+	private static bool $hooked = false;
+
+	/**
 	 * Конструктор.
 	 *
 	 * @param \wpdb          $db      База WordPress.
@@ -48,24 +62,156 @@ final class KeywordUsage {
 			return array();
 		}
 
-		$password = $public_only ? " AND p.post_password = ''" : '';
+		return self::matching( self::candidates( $this->known(), $exclude, $public_only ), $keyword, $this->matcher, $limit );
+	}
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- в запрос подставляется только готовое условие без данных пользователя.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- два столбца по индексу ключа меты; только при анализе одной записи.
+	/**
+	 * Ключи опубликованных записей: ID записи → ключ и признак пароля, новые записи первыми.
+	 *
+	 * Читаются одним запросом на весь PHP-запрос, а не на каждую запись: импорт и пересчёт оценки
+	 * анализируют сотни записей подряд, и чтение тысяч ключей на каждую делало пачку квадратичной.
+	 * Новые ключи, записанные в этом же запросе, дописываются в список хуками меты; сохранение записи
+	 * (смена статуса или пароля) сбрасывает список.
+	 *
+	 * @return array<int, array{keyword: string, protected: bool}>
+	 */
+	private function known(): array {
+		if ( null !== self::$known ) {
+			return self::$known;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- три столбца по индексу ключа меты; один раз на запрос.
 		$rows = $this->db->get_results(
 			$this->db->prepare(
-				"SELECT m.post_id, m.meta_value FROM {$this->db->postmeta} m JOIN {$this->db->posts} p ON p.ID = m.post_id
-				WHERE m.meta_key = %s AND m.meta_value <> '' AND p.post_status = 'publish' AND p.ID <> %d{$password}
+				"SELECT m.post_id, m.meta_value, p.post_password FROM {$this->db->postmeta} m JOIN {$this->db->posts} p ON p.ID = m.post_id
+				WHERE m.meta_key = %s AND m.meta_value <> '' AND p.post_status = 'publish'
 				ORDER BY m.post_id DESC LIMIT %d",
 				MetaKeys::FOCUS_KEYWORD,
-				$exclude,
-				self::SCAN_LIMIT
+				self::SCAN_LIMIT + 1
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
-		return self::matching( (array) $rows, $keyword, $this->matcher, $limit );
+		self::$known = array();
+
+		foreach ( (array) $rows as $row ) {
+			self::$known[ (int) $row['post_id'] ] ??= array(
+				'keyword'   => (string) $row['meta_value'],
+				'protected' => '' !== (string) $row['post_password'],
+			);
+		}
+
+		if ( ! self::$hooked && function_exists( 'add_action' ) ) {
+			self::$hooked = true;
+
+			add_action( 'added_post_meta', array( self::class, 'on_meta' ), 10, 4 );
+			add_action( 'updated_post_meta', array( self::class, 'on_meta' ), 10, 4 );
+			add_action( 'deleted_post_meta', array( self::class, 'on_meta_deleted' ), 10, 3 );
+			add_action( 'save_post', array( self::class, 'forget' ) );
+			add_action( 'deleted_post', array( self::class, 'forget' ) );
+		}
+
+		return self::$known;
+	}
+
+	/**
+	 * Дописывает в список ключ, записанный в этом запросе.
+	 *
+	 * @param int    $meta_id    ID меты.
+	 * @param int    $post_id    ID записи.
+	 * @param string $meta_key   Ключ меты.
+	 * @param mixed  $meta_value Значение.
+	 */
+	public static function on_meta( $meta_id, $post_id, $meta_key, $meta_value ): void {
+		unset( $meta_id );
+
+		if ( MetaKeys::FOCUS_KEYWORD !== $meta_key || null === self::$known ) {
+			return;
+		}
+
+		$post = get_post( (int) $post_id );
+
+		self::$known = self::patch(
+			self::$known,
+			(int) $post_id,
+			$post instanceof \WP_Post && 'publish' === $post->post_status && is_scalar( $meta_value ) ? (string) $meta_value : '',
+			$post instanceof \WP_Post && '' !== $post->post_password
+		);
+	}
+
+	/**
+	 * Убирает из списка удалённый ключ.
+	 *
+	 * @param mixed  $meta_ids ID удалённой меты.
+	 * @param int    $post_id  ID записи.
+	 * @param string $meta_key Ключ меты.
+	 */
+	public static function on_meta_deleted( $meta_ids, $post_id, $meta_key ): void {
+		unset( $meta_ids );
+
+		if ( MetaKeys::FOCUS_KEYWORD === $meta_key && null !== self::$known ) {
+			self::$known = self::patch( self::$known, (int) $post_id, '', false );
+		}
+	}
+
+	/**
+	 * Сбрасывает список: он перечитается при следующем анализе.
+	 */
+	public static function forget(): void {
+		self::$known = null;
+	}
+
+	/**
+	 * Список с изменённым ключом одной записи; пустой ключ убирает запись из списка.
+	 *
+	 * @param array<int, array{keyword: string, protected: bool}> $known     Список.
+	 * @param int                                                 $post_id   ID записи.
+	 * @param string                                              $keyword   Ключ; пустой — записи нет.
+	 * @param bool                                                $locked    Запись под паролем.
+	 * @return array<int, array{keyword: string, protected: bool}>
+	 */
+	public static function patch( array $known, int $post_id, string $keyword, bool $locked ): array {
+		unset( $known[ $post_id ] );
+
+		if ( '' !== trim( $keyword ) ) {
+			$known[ $post_id ] = array(
+				'keyword'   => $keyword,
+				'protected' => $locked,
+			);
+		}
+
+		krsort( $known, SORT_NUMERIC );
+
+		return $known;
+	}
+
+	/**
+	 * Строки для сравнения: без исключённой записи, без закрытых паролем (если нужно), не больше SCAN_LIMIT.
+	 *
+	 * @param array<int, array{keyword: string, protected: bool}> $known       Список, новые записи первыми.
+	 * @param int                                                 $exclude     ID записи, которую не учитывать.
+	 * @param bool                                                $public_only Пропускать записи под паролем.
+	 * @return list<array{post_id: int, meta_value: string}>
+	 */
+	public static function candidates( array $known, int $exclude, bool $public_only ): array {
+		$rows = array();
+
+		foreach ( $known as $post_id => $item ) {
+			if ( $post_id === $exclude || ( $public_only && $item['protected'] ) ) {
+				continue;
+			}
+
+			$rows[] = array(
+				'post_id'    => (int) $post_id,
+				'meta_value' => $item['keyword'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- строка уже прочитанного списка, а не запрос.
+			);
+
+			if ( count( $rows ) >= self::SCAN_LIMIT ) {
+				break;
+			}
+		}
+
+		return $rows;
 	}
 
 	/**

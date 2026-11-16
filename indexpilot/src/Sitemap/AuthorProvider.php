@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Sitemap;
 
+use IndexPilot\Authors\AuthorProfile;
 use IndexPilot\Resolver\Context;
 use IndexPilot\Resolver\MetaResolver;
 
@@ -44,20 +45,23 @@ final class AuthorProvider {
 			return $this->entries;
 		}
 
-		$ids = get_users(
-			array(
-				'has_published_posts' => true,
-				'fields'              => 'ID',
-				'orderby'             => 'ID',
-				'order'               => 'ASC',
-				'number'              => 2000,
-			)
-		);
+		// Авторы с опубликованными записями, время их последней записи и число записей — одним групповым запросом.
+		// Число записей нужно резолверу (страница автора с малым числом записей закрыта); без подсказки он считал бы
+		// записи каждого автора отдельным запросом.
+		$stats    = $this->stats();
+		$modified = array_map( static fn( array $row ): string => $row['modified'], $stats );
+		$ids      = array_slice( array_keys( $stats ), 0, 2000 );
+
+		AuthorProfile::prime_counts( array_map( static fn( array $row ): int => $row['count'], $stats ) );
+		cache_users( $ids );
 
 		$this->entries = array();
-		$modified      = array() === $ids ? array() : $this->modified();
 
-		foreach ( array_map( 'intval', (array) $ids ) as $user_id ) {
+		foreach ( $ids as $user_id ) {
+			if ( false === get_userdata( $user_id ) ) {
+				continue;
+			}
+
 			$url = get_author_posts_url( $user_id );
 
 			if ( EntryPolicy::allows( $url, $this->resolver->indexing( new Context( Context::AUTHOR, $user_id ) ), false ) ) {
@@ -79,13 +83,20 @@ final class AuthorProvider {
 	}
 
 	/**
-	 * Время последней изменённой опубликованной записи каждого автора: один групповой запрос на файл.
+	 * Авторы с опубликованными записями: время последней изменённой записи и число записей. Один групповой запрос на файл.
+	 * Типы записей — те же, по которым AuthorProfile::post_count() считает записи автора.
 	 *
-	 * @return array<int, string> ID автора => время MySQL по Гринвичу.
+	 * @return array<int, array{modified: string, count: int}> ID автора => сведения, по возрастанию ID.
 	 */
-	private function modified(): array {
+	private function stats(): array {
 		$db    = $this->db ?? $GLOBALS['wpdb'];
-		$types = array_values( array_diff( get_post_types( array( 'public' => true ) ), array( 'attachment' ) ) );
+		$types = array();
+
+		foreach ( get_post_types( array( 'public' => true ) ) as $type ) {
+			if ( 'attachment' !== $type && is_post_type_viewable( $type ) ) {
+				$types[] = (string) $type;
+			}
+		}
 
 		if ( array() === $types ) {
 			return array();
@@ -97,19 +108,24 @@ final class AuthorProvider {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- один групповой запрос на файл карты; готовый XML кэшируется целиком.
 		$rows = $db->get_results(
 			$db->prepare(
-				"SELECT post_author, MAX( post_modified_gmt ) AS modified FROM {$db->posts} WHERE post_status = 'publish' AND post_type IN ( {$placeholders} ) GROUP BY post_author",
+				"SELECT post_author, MAX( post_modified_gmt ) AS modified, COUNT(*) AS posts FROM {$db->posts} WHERE post_status = 'publish' AND post_type IN ( {$placeholders} ) GROUP BY post_author ORDER BY post_author ASC",
 				$types
 			),
 			ARRAY_A
 		);
 		// phpcs:enable
 
-		$modified = array();
+		$stats = array();
 
 		foreach ( (array) $rows as $row ) {
-			$modified[ (int) $row['post_author'] ] = (string) $row['modified'];
+			if ( (int) $row['post_author'] > 0 ) {
+				$stats[ (int) $row['post_author'] ] = array(
+					'modified' => (string) $row['modified'],
+					'count'    => (int) $row['posts'],
+				);
+			}
 		}
 
-		return $modified;
+		return $stats;
 	}
 }

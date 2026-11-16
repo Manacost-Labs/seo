@@ -26,6 +26,23 @@ final class KeywordMatcher {
 	private const EXTRA_WORDS = 2;
 
 	/**
+	 * Строки не длиннее этого (в байтах) запоминаются: это ключи, а не тексты.
+	 */
+	private const MEMO_LENGTH = 200;
+
+	/**
+	 * Сколько строк каждого вида помнить; при переполнении память очищается.
+	 */
+	private const MEMO_SIZE = 20000;
+
+	/**
+	 * Запомненные основы коротких строк: вид → строка → основы.
+	 *
+	 * @var array<string, array<string, list<string>>>
+	 */
+	private array $memo = array();
+
+	/**
 	 * Служебные слова, которые не участвуют в сравнении.
 	 */
 	private const STOP_WORDS = array( 'и', 'в', 'во', 'на', 'для', 'по', 'от', 'с', 'со', 'к', 'о', 'об', 'из', 'за', 'у', 'the', 'a', 'an', 'of', 'for', 'in', 'on', 'to', 'and' );
@@ -74,7 +91,33 @@ final class KeywordMatcher {
 	 * @return list<string>
 	 */
 	public function stems( string $text ): array {
-		return array_map( array( $this, 'stem' ), $this->canonical_words( $text ) );
+		// Короткие строки (ключи) сравниваются тысячами — при проверке занятого ключа каждый ключ сайта
+		// сопоставляется с ключом записи. Их основы запоминаются; длинные тексты не запоминаются.
+		if ( strlen( $text ) > self::MEMO_LENGTH ) {
+			return array_map( array( $this, 'stem' ), $this->canonical_words( $text ) );
+		}
+
+		return $this->memo( 'stems', $text, fn(): array => array_map( array( $this, 'stem' ), $this->canonical_words( $text ) ) );
+	}
+
+	/**
+	 * Запомненный результат для короткой строки.
+	 *
+	 * @param string            $kind  Вид результата.
+	 * @param string            $text  Строка.
+	 * @param callable(): array $build Вычисление.
+	 * @return list<string>
+	 */
+	private function memo( string $kind, string $text, callable $build ): array {
+		if ( ! isset( $this->memo[ $kind ][ $text ] ) ) {
+			if ( count( $this->memo[ $kind ] ?? array() ) >= self::MEMO_SIZE ) {
+				$this->memo[ $kind ] = array();
+			}
+
+			$this->memo[ $kind ][ $text ] = $build();
+		}
+
+		return $this->memo[ $kind ][ $text ];
 	}
 
 	/**
@@ -179,7 +222,11 @@ final class KeywordMatcher {
 	 * @return list<string>
 	 */
 	private function keyword_stems( string $keyword ): array {
-		return $this->significant_stems( $this->canonical_words( $keyword ) );
+		if ( strlen( $keyword ) > self::MEMO_LENGTH ) {
+			return $this->significant_stems( $this->canonical_words( $keyword ) );
+		}
+
+		return $this->memo( 'keyword', $keyword, fn(): array => $this->significant_stems( $this->canonical_words( $keyword ) ) );
 	}
 
 	/**

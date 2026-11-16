@@ -367,4 +367,30 @@ final class AnalyzerTest extends TestCase {
 		self::assertSame( array( 9, 7 ), KeywordUsage::matching( $rows, 'колода жреца', $matcher, 2 ) );
 		self::assertSame( array(), KeywordUsage::matching( $rows, 'колода друида', $matcher, 5 ) );
 	}
+
+	public function test_keyword_list_read_once_follows_keywords_written_in_the_same_request(): void {
+		$known = array(
+			9 => array(
+				'keyword'   => 'колода жреца',
+				'protected' => false,
+			),
+			4 => array(
+				'keyword'   => 'гайд по магу',
+				'protected' => true,
+			),
+		);
+
+		// Импорт записал ключ записи 6 после того, как список был прочитан: запись 6 встаёт на своё место по ID.
+		$known = KeywordUsage::patch( $known, 6, 'колоды жреца', false );
+		self::assertSame( array( 9, 6, 4 ), array_keys( $known ) );
+
+		$matcher = ( new Analyzer() )->matcher();
+
+		self::assertSame( array( 9, 6 ), KeywordUsage::matching( KeywordUsage::candidates( $known, 0, false ), 'колода жреца', $matcher, 5 ) );
+		self::assertSame( array( 6 ), KeywordUsage::matching( KeywordUsage::candidates( $known, 9, false ), 'колода жреца', $matcher, 5 ), 'сама запись не считается' );
+		self::assertSame( array( 9, 6 ), array_column( KeywordUsage::candidates( $known, 0, true ), 'post_id' ), 'записи под паролем пропускаются' );
+
+		// Пустой ключ убирает запись из списка.
+		self::assertSame( array( 9, 4 ), array_keys( KeywordUsage::patch( $known, 6, '', false ) ) );
+	}
 }

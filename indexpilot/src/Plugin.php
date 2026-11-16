@@ -64,6 +64,7 @@ use IndexPilot\Import\Source;
 use IndexPilot\Import\SvlSeoImporter;
 use IndexPilot\Import\WpMetaStore;
 use IndexPilot\Links\Indexer as LinkIndexer;
+use IndexPilot\Links\PostPathResolver;
 use IndexPilot\Links\Reports as LinkReports;
 use IndexPilot\Links\Scanner as LinkScanner;
 use IndexPilot\Links\Schema as LinkSchema;
@@ -121,7 +122,7 @@ use IndexPilot\Variables\VariableRegistry;
  */
 final class Plugin {
 
-	public const VERSION = '0.1.0';
+	public const VERSION = '1.0.0-rc1';
 
 	/**
 	 * Единственный экземпляр.
@@ -667,23 +668,16 @@ final class Plugin {
 		if ( null === $this->link_scanner ) {
 			global $wpdb;
 
-			$cache = array();
+			// Адрес ссылки приведён к виду без порта и параметров, поэтому запись ищется по пути.
+			$resolver = new PostPathResolver( $wpdb );
 
 			$this->link_scanner = new LinkScanner(
 				$wpdb,
 				new LinkIndexer(
 					new WpLinkStore( $wpdb ),
 					(string) wp_parse_url( home_url(), PHP_URL_HOST ),
-					// Адрес ссылки приведён к виду без порта и параметров, поэтому запись ищется по пути.
-					static function ( string $url ) use ( &$cache ): int {
-						$path = (string) wp_parse_url( $url, PHP_URL_PATH );
-
-						if ( ! isset( $cache[ $path ] ) ) {
-							$cache[ $path ] = (int) url_to_postid( home_url( $path ) );
-						}
-
-						return $cache[ $path ];
-					}
+					array( $resolver, 'resolve' ),
+					array( $resolver, 'prime' )
 				)
 			);
 		}

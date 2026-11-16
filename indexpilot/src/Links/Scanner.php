@@ -118,11 +118,23 @@ final class Scanner {
 		);
 		$ids = array_map( 'intval', (array) $ids );
 
+		// Записи пачки загружаются одним запросом, их ссылки разбираются и ищутся разом.
+		_prime_post_caches( $ids, false, false );
+
+		$texts = array();
+
 		foreach ( $ids as $id ) {
-			$this->index_post( $id );
+			$post = get_post( $id );
+
+			if ( $post instanceof \WP_Post ) {
+				$texts[ $id ] = (string) $post->post_content;
+			}
+
 			$state['last_id'] = $id;
 			++$state['processed'];
 		}
+
+		$this->indexer->index_many( $texts );
 
 		$state['done']    = count( $ids ) < self::BATCH;
 		$state['updated'] = time();

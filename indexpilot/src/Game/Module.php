@@ -567,8 +567,12 @@ final class Module {
 		);
 
 		$decks = array();
+		$ids   = array_map( 'intval', $ids );
 
-		foreach ( array_map( 'intval', $ids ) as $id ) {
+		// Заголовки и адреса колод списка читаются дальше по одной: записи загружаются заранее одним запросом.
+		_prime_post_caches( $ids, false, false );
+
+		foreach ( $ids as $id ) {
 			// В список идут только актуальные версии: у старых канонический адрес ведёт на них же.
 			if ( $id !== $exclude && $this->current_version( $id ) === $id ) {
 				$decks[] = $id;

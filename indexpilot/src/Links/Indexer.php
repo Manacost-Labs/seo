@@ -23,14 +23,24 @@ final class Indexer {
 	private $resolve_post;
 
 	/**
+	 * Функция подготовки пачки адресов.
+	 *
+	 * @var callable|null
+	 */
+	private $prime;
+
+	/**
 	 * Конструктор.
 	 *
 	 * @param LinkStore $store        Хранилище ссылок.
 	 * @param string    $home_host    Хост сайта.
 	 * @param callable  $resolve_post Функция: адрес => ID записи или 0.
+	 * @param ?callable $prime        Функция: список внутренних адресов пачки => ничего. Вызывается до разбора
+	 *                                пачки, чтобы найти записи всех её ссылок разом, а не по одной.
 	 */
-	public function __construct( private LinkStore $store, private string $home_host, callable $resolve_post ) {
+	public function __construct( private LinkStore $store, private string $home_host, callable $resolve_post, ?callable $prime = null ) {
 		$this->resolve_post = $resolve_post;
+		$this->prime        = $prime;
 	}
 
 	/**
@@ -40,9 +50,51 @@ final class Indexer {
 	 * @param string $html    HTML текста записи.
 	 */
 	public function index( int $post_id, string $html ): int {
+		return $this->index_many( array( $post_id => $html ) );
+	}
+
+	/**
+	 * Сохраняет ссылки нескольких записей. Возвращает общее число сохранённых ссылок.
+	 *
+	 * @param array<int, string> $texts ID записи => HTML текста.
+	 */
+	public function index_many( array $texts ): int {
+		$links    = array();
+		$internal = array();
+
+		foreach ( $texts as $post_id => $html ) {
+			$links[ $post_id ] = Extractor::extract( $html, $this->home_host );
+
+			foreach ( $links[ $post_id ] as $link ) {
+				if ( 'internal' === $link['type'] ) {
+					$internal[ $link['url'] ] = true;
+				}
+			}
+		}
+
+		if ( null !== $this->prime && array() !== $internal ) {
+			( $this->prime )( array_keys( $internal ) );
+		}
+
+		$count = 0;
+
+		foreach ( $links as $post_id => $list ) {
+			$count += $this->save( (int) $post_id, $list );
+		}
+
+		return $count;
+	}
+
+	/**
+	 * Сохраняет разобранные ссылки записи.
+	 *
+	 * @param int                                                     $post_id ID записи.
+	 * @param list<array{url: string, type: string, nofollow: bool}> $links   Ссылки.
+	 */
+	private function save( int $post_id, array $links ): int {
 		$rows = array();
 
-		foreach ( Extractor::extract( $html, $this->home_host ) as $link ) {
+		foreach ( $links as $link ) {
 			$target = 'internal' === $link['type'] ? (int) ( $this->resolve_post )( $link['url'] ) : 0;
 
 			// Ссылка записи на саму себя ничего не говорит о её связях с сайтом.

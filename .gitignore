@@ -11,6 +11,7 @@ indexpilot/tests/smoke/urls.json
 indexpilot/tests/smoke/game-urls.json
 indexpilot/tests/smoke/shortlinks.json
 indexpilot/tests/smoke/admin-result.json
+indexpilot/tests/smoke/upgrade-before.json
 
 # Служебное
 *.log

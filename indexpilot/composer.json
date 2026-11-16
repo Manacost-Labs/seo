@@ -18,7 +18,8 @@
 	},
 	"autoload-dev": {
 		"psr-4": {
-			"IndexPilot\\Tests\\": "tests/php/"
+			"IndexPilot\\Tests\\": "tests/php/",
+			"IndexPilot\\Tools\\": "../tools/lib/"
 		}
 	},
 	"scripts": {

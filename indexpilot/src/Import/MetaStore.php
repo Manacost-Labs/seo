@@ -37,4 +37,11 @@ interface MetaStore {
 	 * @param mixed  $value   Значение.
 	 */
 	public function set( int $post_id, string $key, mixed $value ): void;
+
+	/**
+	 * Загружает записи пачки и их мету заранее, чтобы не читать их по одной.
+	 *
+	 * @param list<int> $post_ids ID записей.
+	 */
+	public function prime( array $post_ids ): void;
 }

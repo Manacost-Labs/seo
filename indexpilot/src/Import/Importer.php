@@ -73,6 +73,10 @@ final class Importer {
 			'samples'   => array(),
 		);
 
+		if ( array() !== $batch ) {
+			$this->store->prime( array_map( 'intval', array_keys( $batch ) ) );
+		}
+
 		foreach ( $batch as $post_id => $row ) {
 			$post_id = (int) $post_id;
 

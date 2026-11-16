@@ -31,19 +31,20 @@ final class WpLinkStore implements LinkStore {
 	public function replace( int $post_id, array $rows ): void {
 		$this->remove( $post_id );
 
-		foreach ( $rows as $row ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- собственная таблица плагина.
-			$this->db->insert(
-				Schema::table( $this->db ),
-				array(
-					'post_id'        => $post_id,
-					'target_post_id' => (int) $row['target_post_id'],
-					'type'           => (string) $row['type'],
-					'nofollow'       => $row['nofollow'] ? 1 : 0,
-					'url'            => (string) $row['url'],
-				),
-				array( '%d', '%d', '%s', '%d', '%s' )
-			);
+		// Все ссылки записи — одним запросом на сотню строк, а не запросом на каждую.
+		foreach ( array_chunk( $rows, 100 ) as $chunk ) {
+			$values = array();
+			$args   = array( Schema::table( $this->db ) );
+
+			foreach ( $chunk as $row ) {
+				$values[] = '( %d, %d, %s, %d, %s )';
+				array_push( $args, $post_id, (int) $row['target_post_id'], (string) $row['type'], $row['nofollow'] ? 1 : 0, (string) $row['url'] );
+			}
+
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- в запрос подставляются только заполнители по числу строк.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- собственная таблица плагина.
+			$this->db->query( $this->db->prepare( 'INSERT INTO %i ( post_id, target_post_id, type, nofollow, url ) VALUES ' . implode( ', ', $values ), $args ) );
+			// phpcs:enable
 		}
 	}
 

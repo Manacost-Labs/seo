@@ -94,3 +94,6 @@ foreach ( array( 'indexpilot_redirects', 'indexpilot_404', 'indexpilot_health', 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- удаление собственной таблицы плагина по явной настройке.
 	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $wpdb->prefix . $indexpilot_table ) );
 }
+// Временные значения: кэш карты сайта, ответы второго сайта. Иначе они дожили бы до своего срока в таблице опций.
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- удаление собственных временных значений плагина по явной настройке.
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", $wpdb->esc_like( '_transient_indexpilot_' ) . '%', $wpdb->esc_like( '_transient_timeout_indexpilot_' ) . '%' ) );
