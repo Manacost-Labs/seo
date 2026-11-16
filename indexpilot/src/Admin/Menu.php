@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace IndexPilot\Admin;
 
 use IndexPilot\Admin\Reports\AuditReport;
+use IndexPilot\Admin\Reports\AuthorsReport;
 use IndexPilot\Admin\Reports\ImagesReport;
 use IndexPilot\Admin\Reports\LinksReport;
 use IndexPilot\Admin\Reports\RedirectsReport;
@@ -28,7 +29,7 @@ final class Menu {
 		OverviewPage::SLUG,
 		array(
 			'content',
-			array( BulkEditor::SLUG, AuditReport::SLUG, LinksReport::SLUG, ImagesReport::SLUG, PatchReport::SLUG ),
+			array( BulkEditor::SLUG, AuditReport::SLUG, LinksReport::SLUG, ImagesReport::SLUG, AuthorsReport::SLUG, PatchReport::SLUG ),
 		),
 		array(
 			'promo',

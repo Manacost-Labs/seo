@@ -269,6 +269,8 @@ final class Plugin {
 					( new \IndexPilot\Admin\NotFoundPage( $this->not_found_store(), $this->db() ) )->register();
 					( new \IndexPilot\Admin\HealthPage( $this->health() ) )->register();
 					( new \IndexPilot\Admin\HeadInspector() )->register();
+					( new \IndexPilot\Admin\Reports\AuthorsReport() )->register();
+					( new \IndexPilot\Admin\ReviewBox() )->register();
 					( new LinksReport( $this->link_scanner(), $this->link_reports() ) )->register();
 					( new \IndexPilot\Admin\Reports\ImagesReport() )->register();
 					( new SettingsPage( $this->settings(), $this->site_defaults(), $this->variables() ) )->register();
@@ -334,6 +336,8 @@ final class Plugin {
 			function (): void {
 				$this->breadcrumbs()->register();
 				$this->author_box()->register();
+				// Сводка автора и отметка «Проверил»: пересчёт при сохранении записи, шорткод сводки.
+				( new \IndexPilot\Authors\AuthorPages( new AuthorProfile(), $this->lexicon() ) )->register();
 
 				// Блоки из панели записи: краткий ответ, вопросы и ответы, факты и цитаты.
 				( new AnswerBlock( $this->settings() ) )->register();
@@ -497,6 +501,7 @@ final class Plugin {
 					( new Verification( $this->settings() ) )->register();
 					// Закрытые части записи: обёртка с классом и пометка платного содержимого в разметке.
 					( new \IndexPilot\Schema\Paywall() )->register();
+					( new \IndexPilot\Authors\AuthorPages( new AuthorProfile(), $this->lexicon() ) )->register_front();
 				}
 			}
 		);
