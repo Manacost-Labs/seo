@@ -64,8 +64,15 @@ final class Handler {
 			return;
 		}
 
+		$target = $match['target'];
+
+		// Путь на своём сайте отдаётся полным адресом: так заголовок Location понятен любому клиенту.
+		if ( str_starts_with( $target, '/' ) && ! str_starts_with( $target, '//' ) ) {
+			$target = (string) preg_replace( '#^(https?://[^/]+).*$#i', '$1', home_url() ) . $target;
+		}
+
 		// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- цель задаёт администратор, она может вести на другой сайт.
-		wp_redirect( $match['target'], $match['code'], 'IndexPilot' );
+		wp_redirect( $target, $match['code'], 'IndexPilot' );
 		exit;
 	}
 

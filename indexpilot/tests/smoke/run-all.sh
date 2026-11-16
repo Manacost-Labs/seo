@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Полный прогон проверок на свежем тестовом сайте Playground (порт 9401).
+# Полный прогон проверок на свежем тестовом сайте Playground (порт 9401; другой — через SITE=http://127.0.0.1:ПОРТ).
 # Запуск из каталога indexpilot после старта сервера: bash tests/smoke/run-all.sh
 # Сайт должен быть свежим: часть проверок меняет его данные и рассчитана на один запуск.
 
@@ -49,6 +49,7 @@ json_check breadcrumbs-check.php
 json_check admin-check.php
 curl -s -m 60 -o /dev/null "$BASE/admin-check.php?reset_settings=1"
 json_check redirects-check.php
+json_check redirect-manager-check.php
 json_check links-check.php
 json_check suggest-check.php
 json_check bulk-check.php
@@ -60,6 +61,7 @@ json_check authors-check.php
 json_check game-check.php
 json_check search-check.php
 json_check shortlinks-check.php
+json_check health-check.php
 json_check promo-check.php
 json_check content-check.php
 json_check answers-check.php
@@ -73,7 +75,7 @@ JAR="$(mktemp)"
 curl -s -m 60 -c "$JAR" -o /dev/null "$SITE/wp-login.php"
 curl -s -m 60 -b "$JAR" -c "$JAR" -o /dev/null --data-urlencode "log=admin" --data-urlencode "pwd=password" --data "wp-submit=Log+In&testcookie=1" "$SITE/wp-login.php"
 
-for PAGE in "admin.php?page=indexpilot" "admin.php?page=indexpilot-search" "admin.php?page=indexpilot-import" "admin.php?page=indexpilot-shortlinks" "admin.php?page=indexpilot-redirects" "admin.php?page=indexpilot-links" "admin.php?page=indexpilot-bulk" "admin.php?page=indexpilot-audit" "admin.php?page=indexpilot-overview" "admin.php?page=indexpilot-promo" "admin.php?page=indexpilot-promo-report" "admin.php?page=indexpilot-patch" "edit.php" "edit.php?post_type=hs_deck" "edit-tags.php?taxonomy=category" "profile.php" "index.php"; do
+for PAGE in "admin.php?page=indexpilot" "admin.php?page=indexpilot-search" "admin.php?page=indexpilot-import" "admin.php?page=indexpilot-shortlinks" "admin.php?page=indexpilot-redirects" "admin.php?page=indexpilot-redirect-rules" "admin.php?page=indexpilot-404" "admin.php?page=indexpilot-health" "admin.php?page=indexpilot-links" "admin.php?page=indexpilot-bulk" "admin.php?page=indexpilot-audit" "admin.php?page=indexpilot-overview" "admin.php?page=indexpilot-promo" "admin.php?page=indexpilot-promo-report" "admin.php?page=indexpilot-patch" "edit.php" "edit.php?post_type=hs_deck" "edit-tags.php?taxonomy=category" "profile.php" "index.php"; do
 	BODY="$(curl -s -m 120 -b "$JAR" -w '\nHTTP_CODE=%{http_code}' "$SITE/wp-admin/$PAGE")"
 	if echo "$BODY" | grep -q "HTTP_CODE=200" && ! echo "$BODY" | grep -q -i "critical error\|Fatal error\|Warning</b>\|Notice</b>\|Deprecated</b>" && echo "$BODY" | grep -q "toplevel_page_indexpilot"; then
 		echo "ok   admin: $PAGE"
