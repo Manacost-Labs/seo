@@ -17,7 +17,7 @@ $dist   = $root . '/dist';
 $target = $dist . '/indexpilot';
 
 // Что входит в пакет.
-$include = array( 'indexpilot.php', 'uninstall.php', 'src', 'assets' );
+$include = array( 'indexpilot.php', 'uninstall.php', 'readme.txt', 'CHANGELOG.md', 'src', 'assets' );
 
 if ( ! preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', (string) file_get_contents( $source . '/indexpilot.php' ), $matches ) ) {
 	fwrite( STDERR, "Не найдена версия в заголовке indexpilot.php\n" );
@@ -25,6 +25,21 @@ if ( ! preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', (string) file_get_contents( $
 }
 
 $version = $matches[1];
+
+// Номер версии должен совпадать везде, иначе архив получит одно имя, а сайт покажет другое.
+$version_places = array(
+	'константа INDEXPILOT_VERSION' => array( 'indexpilot.php', "/define\(\s*'INDEXPILOT_VERSION',\s*'([^']+)'/" ),
+	'Plugin::VERSION'              => array( 'src/Plugin.php', "/const VERSION = '([^']+)'/" ),
+	'Stable tag в readme.txt'      => array( 'readme.txt', '/^Stable tag:\s*(\S+)/m' ),
+	'CHANGELOG.md'                 => array( 'CHANGELOG.md', '/^## (\S+)/m' ),
+);
+
+foreach ( $version_places as $place => list( $file, $pattern ) ) {
+	if ( ! preg_match( $pattern, (string) @file_get_contents( $source . '/' . $file ), $found ) || $found[1] !== $version ) {
+		fwrite( STDERR, "Версия $version из заголовка не совпадает: $place\n" );
+		exit( 1 );
+	}
+}
 
 /**
  * Удаляет каталог со всем содержимым.

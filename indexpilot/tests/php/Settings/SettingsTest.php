@@ -145,6 +145,23 @@ final class SettingsTest extends TestCase {
 
 		self::assertSame( 1, preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $header, $matches ) );
 		self::assertSame( $matches[1], Plugin::VERSION );
+		self::assertStringContainsString( "define( 'INDEXPILOT_VERSION', '" . Plugin::VERSION . "' );", $header );
+	}
+
+	public function test_readme_and_changelog_name_the_plugin_version(): void {
+		$root   = dirname( __DIR__, 3 );
+		$readme = (string) file_get_contents( $root . '/readme.txt' );
+		$header = (string) file_get_contents( $root . '/indexpilot.php' );
+
+		self::assertSame( 1, preg_match( '/^Stable tag:\s*(\S+)/m', $readme, $stable ) );
+		self::assertSame( Plugin::VERSION, $stable[1] );
+		self::assertStringContainsString( '## ' . Plugin::VERSION, (string) file_get_contents( $root . '/CHANGELOG.md' ) );
+
+		foreach ( array( 'Requires at least', 'Requires PHP' ) as $field ) {
+			self::assertSame( 1, preg_match( '/^' . $field . ':\s*(\S+)/m', $readme, $in_readme ), $field );
+			self::assertSame( 1, preg_match( '/^\s*\*\s*' . $field . ':\s*(\S+)/m', $header, $in_header ), $field );
+			self::assertSame( $in_header[1], $in_readme[1], $field );
+		}
 	}
 
 	public function test_custom_synonyms_are_kept_as_written_and_stored_only_when_set(): void {
