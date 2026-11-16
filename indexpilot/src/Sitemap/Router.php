@@ -145,6 +145,7 @@ final class Router {
 
 		status_header( 200 );
 		header( 'Content-Type: application/xml; charset=UTF-8' );
+		header( 'X-Content-Type-Options: nosniff' );
 		// Сам файл карты в выдаче не нужен.
 		header( 'X-Robots-Tag: noindex, follow' );
 

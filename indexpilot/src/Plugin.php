@@ -729,7 +729,8 @@ final class Plugin {
 					? (string) get_permalink( $post )
 					: '';
 			},
-			new ShortLinkClickLog( $wpdb )
+			new ShortLinkClickLog( $wpdb ),
+			(string) wp_parse_url( home_url(), PHP_URL_HOST )
 		);
 	}
 

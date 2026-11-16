@@ -69,6 +69,7 @@ final class MarkdownOutput {
 
 		status_header( 200 );
 		header( 'Content-Type: text/markdown; charset=utf-8' );
+		header( 'X-Content-Type-Options: nosniff' );
 		header( 'X-Robots-Tag: noindex' );
 		header( 'Link: <' . esc_url_raw( $canonical ) . '>; rel="canonical"' );
 

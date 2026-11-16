@@ -111,6 +111,11 @@ final class SettingsPage {
 			$input['general']['custom_synonyms'] = MetaRegistrar::template_text( $synonyms, true );
 		}
 
+		// Адрес второго сайта — только https: по нему уходит общий ключ доступа.
+		if ( isset( $input['general']['partner_site_url'] ) ) {
+			$input['general']['partner_site_url'] = \IndexPilot\CrossSite\PartnerClient::secure_url( (string) $input['general']['partner_site_url'] );
+		}
+
 		// Дата патча хранится в одном виде — ГГГГ-ММ-ДД; неверная дата не сохраняется.
 		if ( isset( $input['general']['patch_date'] ) ) {
 			$input['general']['patch_date'] = Patch::normalize_date( (string) $input['general']['patch_date'] );
@@ -241,7 +246,7 @@ final class SettingsPage {
 				<p class="description"><?php esc_html_e( 'Если на двух ваших сайтах стоит один и тот же основной ключ, страницы конкурируют между собой. Укажите адрес второго сайта и общий ключ доступа — анализ записи предупредит о совпадении. На втором сайте заполните те же поля: его адрес — этот сайт, ключ — тот же самый.', 'indexpilot' ); ?></p>
 				<table class="form-table" role="presentation">
 					<?php
-					$this->text( 'general', '', 'partner_site_url', __( 'Адрес второго сайта', 'indexpilot' ), __( 'Например: https://kolodahearthstone.com', 'indexpilot' ), 'regular-text' );
+					$this->text( 'general', '', 'partner_site_url', __( 'Адрес второго сайта', 'indexpilot' ), __( 'Только https, например: https://kolodahearthstone.com', 'indexpilot' ), 'regular-text' );
 					$this->text( 'general', '', 'partner_site_key', __( 'Общий ключ доступа', 'indexpilot' ), __( 'Любая строка из букв и цифр не короче 24 символов, одинаковая на обоих сайтах. Никому её не передавайте.', 'indexpilot' ), 'regular-text code' );
 					?>
 				</table>

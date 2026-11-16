@@ -106,9 +106,9 @@ $update_ok = true === $updated && $tagged['id'] === $store->find( $check_slug )[
 $expired = $logged_service->create( 'https://example.com/', $check_slug . '-old', 302, array(), 'Smoke', '2000-01-01' );
 $expiry_ok = null === $logged_service->resolve( $check_slug . '-old' );
 $logged_service->hit( $check_slug, 'Mozilla/5.0', 'https://source.example/private?secret=yes' );
-$click_ok = array( gmdate( 'Y-m-d' ) => 1 ) === $log->by_day( $check_slug, 30 ) && array( 'source.example' => 1 ) === $log->by_referrer( $check_slug, 30 );
+$click_ok = array( gmdate( 'Y-m-d' ) => 1 ) === $log->by_day( $check_slug, 30 ) && array( 'other' => 1 ) === $log->by_referrer( $check_slug, 30 );
 $logged_service->hit( $check_slug, 'Googlebot', 'https://robot.example/' );
-$robot_ok = 1 === $store->find( $check_slug )['clicks'] && array( gmdate( 'Y-m-d' ) => 1 ) === $log->by_day( $check_slug, 30 ) && array( 'source.example' => 1 ) === $log->by_referrer( $check_slug, 30 );
+$robot_ok = 1 === $store->find( $check_slug )['clicks'] && array( gmdate( 'Y-m-d' ) => 1 ) === $log->by_day( $check_slug, 30 ) && array( 'other' => 1 ) === $log->by_referrer( $check_slug, 30 );
 
 header( 'Content-Type: application/json; charset=utf-8' );
 echo wp_json_encode(

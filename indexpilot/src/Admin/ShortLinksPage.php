@@ -101,16 +101,19 @@ final class ShortLinksPage {
 			wp_die( esc_html__( 'Недостаточно прав.', 'indexpilot' ), 403 );
 		}
 
+		// Свои ссылки редактор меняет и удаляет сам, чужие — только администратор.
+		$service = $this->service->acting_as( get_current_user_id(), current_user_can( 'manage_options' ) );
+
 		if ( 'delete' === $_POST['indexpilot_shortlink_action'] ) {
-			$this->store->delete( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0 );
-			$this->notice = array( __( 'Ссылка удалена.', 'indexpilot' ), 'success' );
+			$result       = $service->delete( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0 );
+			$this->notice = true === $result ? array( __( 'Ссылка удалена.', 'indexpilot' ), 'success' ) : array( $this->error_text( (string) $result ), 'error' );
 
 			return;
 		}
 
 		if ( 'bulk' === $_POST['indexpilot_shortlink_action'] ) {
 			$lines   = isset( $_POST['lines'] ) ? sanitize_textarea_field( wp_unslash( $_POST['lines'] ) ) : '';
-			$results = $this->service->create_many(
+			$results = $service->create_many(
 				$lines,
 				isset( $_POST['code'] ) ? absint( wp_unslash( $_POST['code'] ) ) : 302,
 				isset( $_POST['campaign'] ) ? sanitize_text_field( wp_unslash( $_POST['campaign'] ) ) : ''
@@ -136,7 +139,7 @@ final class ShortLinksPage {
 		$slug   = isset( $_POST['slug'] ) ? sanitize_text_field( wp_unslash( $_POST['slug'] ) ) : '';
 		$code   = isset( $_POST['code'] ) ? absint( wp_unslash( $_POST['code'] ) ) : 302;
 		if ( 'update' === $_POST['indexpilot_shortlink_action'] ) {
-			$result       = $this->service->update_target( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0, $target );
+			$result       = $service->update_target( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0, $target );
 			$this->notice = true === $result ? array( __( 'Адрес обновлён.', 'indexpilot' ), 'success' ) : array( is_string( $result ) ? $this->error_text( $result ) : __( 'Не удалось обновить адрес.', 'indexpilot' ), 'error' );
 			return;
 		}
@@ -146,7 +149,7 @@ final class ShortLinksPage {
 		}
 		$campaign = isset( $_POST['campaign'] ) ? sanitize_text_field( wp_unslash( $_POST['campaign'] ) ) : '';
 		$expiry   = isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : '';
-		$result   = $this->service->create( $target, $slug, $code, $utm, $campaign, $expiry );
+		$result   = $service->create( $target, $slug, $code, $utm, $campaign, $expiry );
 
 		if ( is_string( $result ) ) {
 			$this->notice = array( $this->error_text( $result ), 'error' );
@@ -208,7 +211,7 @@ final class ShortLinksPage {
 						<td>
 							<select id="indexpilot-shortlink-code" name="code">
 								<option value="302"><?php esc_html_e( '302 — временное: каждый переход засчитывается', 'indexpilot' ); ?></option>
-								<option value="301"><?php esc_html_e( '301 — постоянное: браузер запоминает адрес, счётчик неполный', 'indexpilot' ); ?></option>
+								<option value="301"><?php esc_html_e( '301 — постоянное: браузер запоминает адрес, счётчик неполный; только администратор', 'indexpilot' ); ?></option>
 								<option value="307"><?php esc_html_e( '307 — временное, с сохранением метода запроса', 'indexpilot' ); ?></option>
 							</select>
 						</td>
@@ -351,6 +354,8 @@ final class ShortLinksPage {
 			'Код перенаправления должен быть 301, 302 или 307.' => __( 'Код перенаправления должен быть 301, 302 или 307.', 'indexpilot' ),
 			'Код ссылки: от 2 до 64 символов, латинские буквы, цифры, дефис и подчёркивание.' => __( 'Код ссылки: от 2 до 64 символов, латинские буквы, цифры, дефис и подчёркивание.', 'indexpilot' ),
 			'Этот код уже занят.'                => __( 'Этот код уже занят.', 'indexpilot' ),
+			'Ссылка не найдена.'                 => __( 'Ссылка не найдена.', 'indexpilot' ),
+			'Чужую ссылку может изменить или удалить только администратор.' => __( 'Чужую ссылку может изменить или удалить только администратор.', 'indexpilot' ),
 		);
 
 		return $known[ $error ] ?? $error;

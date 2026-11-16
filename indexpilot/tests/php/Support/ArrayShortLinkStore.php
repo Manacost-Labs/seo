@@ -20,7 +20,7 @@ final class ArrayShortLinkStore implements Store {
 		return $this->links[ $slug ] ?? null;
 	}
 
-	public function insert( string $slug, string $target, int $code, string $campaign = '', ?string $expires_at = null ): int {
+	public function insert( string $slug, string $target, int $code, string $campaign = '', ?string $expires_at = null, int $author = 0 ): int {
 		$id                   = count( $this->links ) + 1;
 		$this->links[ $slug ] = array(
 			'id'         => $id,
@@ -30,6 +30,7 @@ final class ArrayShortLinkStore implements Store {
 			'clicks'     => 0,
 			'campaign'   => $campaign,
 			'expires_at' => $expires_at,
+			'author'     => $author,
 		);
 
 		return $id;

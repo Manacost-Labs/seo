@@ -66,8 +66,10 @@ final class PartnerClient {
 		$response = wp_safe_remote_get(
 			add_query_arg( 'keyword', rawurlencode( $keyword ), $this->url() . '/wp-json/indexpilot/v1/keywords' ),
 			array(
-				'timeout' => 3,
-				'headers' => array( KeywordAccess::HEADER => (string) $this->settings->general( 'partner_site_key' ) ),
+				'timeout'     => 3,
+				// Перенаправление унесло бы общий ключ на чужой адрес: запрос идёт только по адресу из настроек.
+				'redirection' => 0,
+				'headers'     => array( KeywordAccess::HEADER => (string) $this->settings->general( 'partner_site_key' ) ),
 			)
 		);
 
@@ -96,9 +98,20 @@ final class PartnerClient {
 	}
 
 	/**
-	 * Адрес второго сайта без слэша в конце.
+	 * Адрес второго сайта без слэша в конце. Только https: по http общий ключ ушёл бы открытым текстом.
 	 */
 	private function url(): string {
-		return untrailingslashit( esc_url_raw( trim( (string) $this->settings->general( 'partner_site_url' ) ) ) );
+		return self::secure_url( untrailingslashit( esc_url_raw( trim( (string) $this->settings->general( 'partner_site_url' ) ) ) ) );
+	}
+
+	/**
+	 * Адрес как есть, если он начинается с https://, иначе пустая строка.
+	 *
+	 * @param string $url Адрес второго сайта.
+	 */
+	public static function secure_url( string $url ): string {
+		$url = trim( $url );
+
+		return 1 === preg_match( '#^https://[^/?\#\s]+\.[^/?\#\s]+#i', $url ) ? $url : '';
 	}
 }

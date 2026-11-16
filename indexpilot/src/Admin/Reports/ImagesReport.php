@@ -181,8 +181,10 @@ final class ImagesReport {
 									<td><?php echo wp_get_attachment_image( $id, array( 60, 60 ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- готовый тег картинки от WordPress. ?></td>
 									<td><?php echo esc_html( wp_basename( (string) get_attached_file( $id ) ) ); ?></td>
 									<td>
-										<?php if ( $parent > 0 ) : ?>
+										<?php if ( $parent > 0 && current_user_can( 'edit_post', $parent ) ) : ?>
 											<a href="<?php echo esc_url( (string) get_edit_post_link( $parent ) ); ?>"><?php echo esc_html( wp_strip_all_tags( get_the_title( $parent ) ) ); ?></a>
+										<?php elseif ( $parent > 0 && current_user_can( 'read_post', $parent ) ) : ?>
+											<?php echo esc_html( wp_strip_all_tags( get_the_title( $parent ) ) ); ?>
 										<?php else : ?>
 											—
 										<?php endif; ?>

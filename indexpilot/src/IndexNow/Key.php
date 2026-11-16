@@ -52,6 +52,7 @@ final class Key {
 
 		status_header( 200 );
 		header( 'Content-Type: text/plain; charset=UTF-8' );
+		header( 'X-Content-Type-Options: nosniff' );
 		header( 'X-Robots-Tag: noindex' );
 
 		echo esc_html( $key );
