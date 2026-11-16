@@ -115,8 +115,9 @@ final class SyncJob {
 		$steps   = $this->steps();
 		$periods = self::periods( (string) $state['today'] );
 		$done    = 0;
+		$total   = count( $steps );
 
-		while ( $done < $max_steps && (int) $state['step'] < count( $steps ) ) {
+		while ( $done < $max_steps && (int) $state['step'] < $total ) {
 			list( $engine, $period ) = $steps[ (int) $state['step'] ];
 			$state['step']           = (int) $state['step'] + 1;
 
@@ -144,7 +145,7 @@ final class SyncJob {
 			$state['rows'] = (int) $state['rows'] + count( $rows );
 		}
 
-		if ( (int) $state['step'] >= count( $steps ) ) {
+		if ( (int) $state['step'] >= $total ) {
 			$state['done']     = true;
 			$state['finished'] = $now;
 			$this->store->remove_older( $now - self::KEEP_DAYS * 86400 );

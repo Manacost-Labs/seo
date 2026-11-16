@@ -111,7 +111,7 @@ final class QueriesReport {
 				continue;
 			}
 
-			$key            = (string) $row['page'];
+			$key             = (string) $row['page'];
 			$pages[ $key ] ??= self::page( $row ) + array(
 				'before' => 0,
 				'after'  => 0,

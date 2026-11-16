@@ -81,7 +81,16 @@ wp_clear_scheduled_hook( 'indexpilot_health_weekly' );
 wp_clear_scheduled_hook( 'indexpilot_health_batch' );
 wp_clear_scheduled_hook( 'indexpilot_outbound_daily' );
 wp_clear_scheduled_hook( 'indexpilot_outbound_batch' );
-foreach ( array( 'indexpilot_redirects', 'indexpilot_404', 'indexpilot_health' ) as $indexpilot_table ) {
+// Данные поиска: доступы к Search Console и Вебмастеру, состояние загрузки, проверка индексации, мост между сайтами.
+foreach ( array( 'indexpilot_search_data', 'indexpilot_search_sync', 'indexpilot_search_inspection', 'indexpilot_queries_db_version', 'indexpilot_queries_summary', 'indexpilot_bridge_cursor' ) as $indexpilot_option ) {
+	delete_option( $indexpilot_option );
+}
+foreach ( array( 'indexpilot_search_daily', 'indexpilot_search_batch', 'indexpilot_search_inspect', 'indexpilot_bridge_batch' ) as $indexpilot_hook ) {
+	wp_clear_scheduled_hook( $indexpilot_hook );
+}
+delete_post_meta_by_key( '_indexpilot_bridge' );
+delete_post_meta_by_key( '_indexpilot_keep' );
+foreach ( array( 'indexpilot_redirects', 'indexpilot_404', 'indexpilot_health', 'indexpilot_queries' ) as $indexpilot_table ) {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- удаление собственной таблицы плагина по явной настройке.
 	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $wpdb->prefix . $indexpilot_table ) );
 }

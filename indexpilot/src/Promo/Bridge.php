@@ -117,6 +117,7 @@ final class Bridge {
 	 * @param string $text Текст.
 	 */
 	private static function text( string $text ): string {
-		return trim( (string) preg_replace( '/\s+/u', ' ', html_entity_decode( strip_tags( $text ), ENT_QUOTES, 'UTF-8' ) ) );
+		// Чистый класс без WordPress: wp_strip_all_tags() здесь недоступна.
+		return trim( (string) preg_replace( '/\s+/u', ' ', html_entity_decode( strip_tags( $text ), ENT_QUOTES, 'UTF-8' ) ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
 	}
 }

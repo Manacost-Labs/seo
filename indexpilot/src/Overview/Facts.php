@@ -88,10 +88,15 @@ final class Facts {
 
 		$health = ( new HealthStore( $this->db ) )->counts();
 
+		// Данные поиска: цифры пересчитаны после загрузки и лежат в опции с автозагрузкой — без запроса к базе.
+		$queries = \IndexPilot\SearchData\WpQueryStore::summary();
+
 		return $counts + $this->redirect_counts() + array(
-			'frequent_404'    => ( new WpNotFoundStore( $this->db ) )->count( self::FREQUENT_404 ),
-			'dead_outbound'   => $health['dead'],
-			'health_problems' => $health['problems'],
+			'queries_near_top' => (int) ( $queries['near_top'] ?? 0 ),
+			'queries_cannibal' => (int) ( $queries['cannibal'] ?? 0 ),
+			'frequent_404'     => ( new WpNotFoundStore( $this->db ) )->count( self::FREQUENT_404 ),
+			'dead_outbound'    => $health['dead'],
+			'health_problems'  => $health['problems'],
 		);
 	}
 

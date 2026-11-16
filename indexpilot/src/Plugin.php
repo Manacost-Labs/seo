@@ -307,6 +307,10 @@ final class Plugin {
 		// Самопроверка сайта и проверка внешних адресов: только по расписанию и по кнопке в админке.
 		$this->health()->register();
 
+		// Данные поиска (Search Console, Вебмастер) и мост между сайтами: сеть — только по расписанию и по кнопке.
+		( new \IndexPilot\SearchData\Module( $this ) )->register();
+		( new \IndexPilot\CrossSite\BridgeSync( $this ) )->register();
+
 		// Граф ссылок: таблица создаётся при первом запуске, ссылки записи пересчитываются при её сохранении.
 		add_action(
 			'init',
