@@ -490,6 +490,11 @@ final class Plugin {
 		// Тексты рубрики выводятся независимо от того, кто печатает мета-теги.
 		add_action( 'template_redirect', array( $this->archive_text(), 'register' ) );
 
+		// Черновик с адресом опубликованной записи не превращает её страницу в 404. Работает и рядом с другим SEO-плагином.
+		if ( ! is_admin() ) {
+			( new \IndexPilot\Compat\PublishedFirst() )->register();
+		}
+
 		// Теги печатаются только на страницах сайта и только если их не выводит другой SEO-плагин.
 		add_action(
 			'template_redirect',
