@@ -47,6 +47,10 @@ final class AioseoSettingsTest extends TestCase {
 		return array(
 			array(
 				'searchAppearance' => array(
+					'global'   => array(
+						'separator'       => '|',
+						'metaDescription' => 'Гайды и колоды Hearthstone.',
+					),
 					'archives' => array(
 						'author' => $closed,
 						'date'   => $closed,
@@ -57,13 +61,13 @@ final class AioseoSettingsTest extends TestCase {
 			array(
 				'searchAppearance' => array(
 					'taxonomies' => array(
-						'category'   => $open,
+						'category'   => $open + array( 'title' => '#taxonomy_title | #site_title' ),
 						'post_tag'   => $closed,
 						'deck_class' => $custom,
 					),
 					'postTypes'  => array(
-						'post'    => $open,
-						'hs_deck' => $open,
+						'post'    => $open + array( 'title' => '#post_title' ),
+						'hs_deck' => $open + array( 'title' => '#post_title #separator_sa #site_title' ),
 					),
 				),
 			),
@@ -77,9 +81,12 @@ final class AioseoSettingsTest extends TestCase {
 
 		self::assertSame( array( 'noindex' => true ), $patch['taxonomies']['post_tag'] );
 		self::assertSame( array( 'noindex' => true ), $patch['taxonomies']['deck_class'], 'Свой robots с noindex тоже закрывает.' );
-		self::assertArrayNotHasKey( 'category', $patch['taxonomies'] );
-		self::assertArrayNotHasKey( 'post_types', $patch, 'Открытые типы записей не трогаются.' );
-		self::assertSame( array( 'author', 'date', 'search' ), array_keys( $patch['special'] ) );
+		self::assertSame( array( 'title' => '%term% | %sitename%' ), $patch['taxonomies']['category'], 'Открытая рубрика: только шаблон заголовка.' );
+		self::assertSame( array( 'title' => '%title%' ), $patch['post_types']['post'], 'Заголовок записи без названия сайта — как было в AIOSEO.' );
+		self::assertArrayNotHasKey( 'hs_deck', $patch['post_types'], 'У колод свои заголовки с датой и режимом.' );
+		self::assertSame( '|', $patch['general']['separator'] );
+		self::assertSame( array( 'home', 'author', 'date', 'search' ), array_keys( $patch['special'] ) );
+		self::assertSame( 'Гайды и колоды Hearthstone.', $patch['special']['home']['description'] );
 	}
 
 	public function test_settings_already_set_in_indexpilot_are_kept(): void {
@@ -94,6 +101,8 @@ final class AioseoSettingsTest extends TestCase {
 		self::assertFalse( $merged['taxonomies']['post_tag']['noindex'], 'Решение, принятое в IndexPilot, важнее.' );
 		self::assertTrue( $merged['special']['author']['noindex'] );
 		self::assertFalse( $merged['general']['hub_auto'] );
+		self::assertSame( '|', $merged['general']['separator'] );
+		self::assertSame( '%term% | %sitename%', $merged['taxonomies']['category']['title'] );
 		self::assertSame( array(), AioseoSettings::patch( array(), array() ) );
 	}
 }

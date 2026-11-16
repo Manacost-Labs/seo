@@ -11,8 +11,10 @@ namespace IndexPilot\Import;
 
 /**
  * Импорт записей переносит поля каждой записи, а закрытые от индексации виды страниц AIOSEO хранит в своих
- * общих настройках: метки, архивы авторов, дат, поиск. Без их переноса после отключения AIOSEO такие страницы
- * открылись бы для индексации. Переносятся только запреты (noindex), и только там, где в IndexPilot ничего не задано.
+ * общих настройках: метки, архивы авторов, дат, поиск. Там же — шаблоны заголовков видов страниц и разделитель.
+ * Без их переноса после отключения AIOSEO такие страницы открылись бы для индексации, а заголовки поменялись бы.
+ * Переносятся запреты (noindex), шаблоны заголовков и разделитель — только там, где в IndexPilot ничего не задано.
+ * Шаблон колод не переносится: у колод свои заголовки с датой и режимом, иначе тысячи колод носили бы одно название.
  */
 final class AioseoSettings {
 
@@ -30,18 +32,40 @@ final class AioseoSettings {
 	 *
 	 * @param array<string, mixed> $options Опция aioseo_options (разобранный JSON).
 	 * @param array<string, mixed> $dynamic Опция aioseo_options_dynamic (разобранный JSON).
-	 * @return array<string, array<string, array{noindex: true}>>
+	 * @return array<string, array<string, mixed>>
 	 */
 	public static function patch( array $options, array $dynamic ): array {
-		$patch = array();
+		$patch     = array();
+		$separator = trim( (string) ( $options['searchAppearance']['global']['separator'] ?? '' ) );
+
+		if ( '' !== $separator ) {
+			$patch['general']['separator'] = $separator;
+		}
+
+		// Описание главной страницы.
+		$home = trim( (string) ( $options['searchAppearance']['global']['metaDescription'] ?? '' ) );
+
+		if ( '' !== $home ) {
+			$patch['special']['home']['description'] = VariableSyntaxConverter::from_aioseo( $home );
+		}
 
 		foreach ( array(
 			'taxonomies' => 'taxonomies',
 			'postTypes'  => 'post_types',
 		) as $group => $section ) {
 			foreach ( (array) ( $dynamic['searchAppearance'][ $group ] ?? array() ) as $name => $item ) {
-				if ( is_array( $item ) && self::closed( $item ) ) {
-					$patch[ $section ][ (string) $name ] = array( 'noindex' => true );
+				if ( ! is_array( $item ) ) {
+					continue;
+				}
+
+				if ( self::closed( $item ) ) {
+					$patch[ $section ][ (string) $name ]['noindex'] = true;
+				}
+
+				$title = trim( (string) ( $item['title'] ?? '' ) );
+
+				if ( '' !== $title && \IndexPilot\Game\DeckVariables::POST_TYPE !== (string) $name ) {
+					$patch[ $section ][ (string) $name ]['title'] = VariableSyntaxConverter::from_aioseo( $title );
 				}
 			}
 		}
@@ -50,7 +74,7 @@ final class AioseoSettings {
 			$item = $options['searchAppearance']['archives'][ $archive ] ?? null;
 
 			if ( is_array( $item ) && self::closed( $item ) ) {
-				$patch['special'][ $special ] = array( 'noindex' => true );
+				$patch['special'][ $special ]['noindex'] = true;
 			}
 		}
 
@@ -58,17 +82,28 @@ final class AioseoSettings {
 	}
 
 	/**
-	 * Дописывает запреты в настройки IndexPilot, не трогая то, что уже задано.
+	 * Дописывает перенесённое в настройки IndexPilot, не трогая то, что уже задано.
 	 *
-	 * @param array<string, mixed>                                $settings Настройки IndexPilot.
-	 * @param array<string, array<string, array{noindex: true}>> $patch    Запреты.
+	 * @param array<string, mixed>                $settings Настройки IndexPilot.
+	 * @param array<string, array<string, mixed>> $patch    Перенесённое из AIOSEO.
 	 * @return array<string, mixed>
 	 */
 	public static function merge( array $settings, array $patch ): array {
 		foreach ( $patch as $section => $items ) {
 			foreach ( $items as $name => $values ) {
-				if ( ! isset( $settings[ $section ][ $name ]['noindex'] ) ) {
-					$settings[ $section ][ $name ]['noindex'] = $values['noindex'];
+				if ( ! is_array( $values ) ) {
+					// Настройка раздела general: разделитель.
+					if ( ! isset( $settings[ $section ][ $name ] ) ) {
+						$settings[ $section ][ $name ] = $values;
+					}
+
+					continue;
+				}
+
+				foreach ( $values as $key => $value ) {
+					if ( ! isset( $settings[ $section ][ $name ][ $key ] ) ) {
+						$settings[ $section ][ $name ][ $key ] = $value;
+					}
 				}
 			}
 		}
@@ -96,7 +131,7 @@ final class AioseoSettings {
 			}
 
 			foreach ( $items as $name => $values ) {
-				if ( is_array( $values ) && isset( $values['noindex'] ) && ! isset( $current[ $section ][ $name ]['noindex'] ) ) {
+				if ( ( $current[ $section ][ $name ] ?? null ) !== $values ) {
 					$changed[ (string) $section ][] = (string) $name;
 				}
 			}

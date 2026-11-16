@@ -54,6 +54,8 @@ final class Head {
 	 */
 	public function register(): void {
 		add_filter( 'pre_get_document_title', array( $this, 'title' ), 20 );
+		// Темы, которые печатают <title> старой функцией wp_title() (Newspaper), получают тот же заголовок.
+		add_filter( 'wp_title', array( $this, 'title' ), 99999 );
 		add_filter( 'wp_robots', array( $this, 'robots' ), 999 );
 		add_action( 'wp_head', array( $this, 'render' ), 1 );
 
