@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Tests\Tools;
 
+use IndexPilot\Tools\CompareHead\Fetcher;
 use IndexPilot\Tools\CompareHead\HeadParser;
 use IndexPilot\Tools\CompareHead\SitemapSampler;
 use IndexPilot\Tools\CompareHead\SnapshotDiff;
@@ -212,6 +213,23 @@ final class CompareHeadTest extends TestCase {
 			$sample['urls']
 		);
 		self::assertNotContains( 'https://s/wp-sitemap.xml', $requested, 'найдя карту, дальше не ищет' );
+	}
+
+	public function test_basic_auth_is_set_only_when_given(): void {
+		$plain = Fetcher::options( 20 );
+
+		self::assertArrayNotHasKey( CURLOPT_USERPWD, $plain );
+		self::assertArrayNotHasKey( CURLOPT_HTTPAUTH, $plain );
+		self::assertSame( Fetcher::USER_AGENT, $plain[ CURLOPT_USERAGENT ] );
+		self::assertContains( 'Cache-Control: no-cache', $plain[ CURLOPT_HTTPHEADER ] );
+		self::assertSame( 20, $plain[ CURLOPT_TIMEOUT ] );
+		self::assertArrayNotHasKey( CURLOPT_USERPWD, Fetcher::options( 20, 'без-двоеточия' ) );
+
+		$auth = Fetcher::options( 20, 'staging:secret' );
+
+		self::assertSame( 'staging:secret', $auth[ CURLOPT_USERPWD ] );
+		self::assertSame( CURLAUTH_BASIC, $auth[ CURLOPT_HTTPAUTH ] );
+		self::assertFalse( $auth[ CURLOPT_UNRESTRICTED_AUTH ], 'при перенаправлении на другой хост пароль не уходит' );
 	}
 
 	public function test_sample_without_sitemap_keeps_home_search_and_404(): void {

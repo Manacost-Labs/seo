@@ -29,10 +29,42 @@ final class Fetcher {
 	/**
 	 * Конструктор.
 	 *
-	 * @param float $delay   Пауза между запросами, секунды.
-	 * @param int   $timeout Таймаут запроса, секунды.
+	 * @param float  $delay   Пауза между запросами, секунды.
+	 * @param int    $timeout Таймаут запроса, секунды.
+	 * @param string $auth    Логин и пароль базовой авторизации «user:pass» (закрытая тестовая площадка); пусто — без неё.
+	 *                        Значение никуда не выводится и не записывается.
 	 */
-	public function __construct( private float $delay = 1.0, private int $timeout = 20 ) {}
+	public function __construct( private float $delay = 1.0, private int $timeout = 20, private string $auth = '' ) {}
+
+	/**
+	 * Параметры curl для одного запроса.
+	 *
+	 * Логин и пароль curl отправляет только на исходный хост: при перенаправлении на другой сайт они не уходят.
+	 *
+	 * @param int    $timeout Таймаут запроса, секунды.
+	 * @param string $auth    «user:pass» или пусто.
+	 * @return array<int, mixed>
+	 */
+	public static function options( int $timeout, string $auth = '' ): array {
+		$options = array(
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_MAXREDIRS      => 10,
+			CURLOPT_TIMEOUT        => $timeout,
+			CURLOPT_CONNECTTIMEOUT => $timeout,
+			CURLOPT_USERAGENT      => self::USER_AGENT,
+			CURLOPT_HTTPHEADER     => array( 'Cache-Control: no-cache', 'Pragma: no-cache' ),
+			CURLOPT_ENCODING       => '',
+		);
+
+		if ( '' !== $auth && str_contains( $auth, ':' ) ) {
+			$options[ CURLOPT_HTTPAUTH ]          = CURLAUTH_BASIC;
+			$options[ CURLOPT_USERPWD ]           = $auth;
+			$options[ CURLOPT_UNRESTRICTED_AUTH ] = false;
+		}
+
+		return $options;
+	}
 
 	/**
 	 * Загружает адрес.
@@ -48,19 +80,7 @@ final class Fetcher {
 		}
 
 		$curl = curl_init( $url );
-		curl_setopt_array(
-			$curl,
-			array(
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_MAXREDIRS      => 10,
-				CURLOPT_TIMEOUT        => $this->timeout,
-				CURLOPT_CONNECTTIMEOUT => $this->timeout,
-				CURLOPT_USERAGENT      => self::USER_AGENT,
-				CURLOPT_HTTPHEADER     => array( 'Cache-Control: no-cache', 'Pragma: no-cache' ),
-				CURLOPT_ENCODING       => '',
-			)
-		);
+		curl_setopt_array( $curl, self::options( $this->timeout, $this->auth ) );
 
 		$body  = curl_exec( $curl );
 		$error = curl_error( $curl );

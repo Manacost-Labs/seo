@@ -11,6 +11,7 @@
  * snapshot — загружает адреса по одному с паузой и записывает теги каждой страницы.
  * diff     — печатает по каждому адресу, что пропало, изменилось и добавилось; код выхода 1,
  *            если хоть один адрес потерял заголовок или описание.
+ * COMPARE_HEAD_AUTH — переменная окружения «user:pass» для базовой авторизации закрытой площадки; значение не печатается и в снимки не пишется.
  *
  * @package IndexPilot
  */
@@ -54,10 +55,11 @@ if ( count( $indexpilot_args ) !== 3 ) {
 list( $indexpilot_mode, $indexpilot_in, $indexpilot_out ) = $indexpilot_args;
 
 $indexpilot_delay = max( 0.0, (float) $indexpilot_options['delay'] );
+$indexpilot_auth  = (string) getenv( 'COMPARE_HEAD_AUTH' );
 
 switch ( $indexpilot_mode ) {
 	case 'sample':
-		$indexpilot_fetcher = new Fetcher( $indexpilot_delay );
+		$indexpilot_fetcher = new Fetcher( $indexpilot_delay, 20, $indexpilot_auth );
 		$indexpilot_sampler = new SitemapSampler(
 			static function ( string $url ) use ( $indexpilot_fetcher ): array {
 				$response = $indexpilot_fetcher->get( $url );
@@ -99,7 +101,7 @@ switch ( $indexpilot_mode ) {
 		}
 		$indexpilot_urls = array_values( array_unique( $indexpilot_urls ) );
 
-		$indexpilot_fetcher  = new Fetcher( $indexpilot_delay );
+		$indexpilot_fetcher  = new Fetcher( $indexpilot_delay, 20, $indexpilot_auth );
 		$indexpilot_snapshot = array(
 			'created'    => gmdate( 'c' ),
 			'user_agent' => Fetcher::USER_AGENT,
