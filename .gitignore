@@ -20,3 +20,14 @@ Thumbs.db
 
 # Рабочие копии исполнителей
 .claude/worktrees/
+
+# Внутренние документы и локальные инструменты: в публичный репозиторий не входят
+docs/PLAN.md
+docs/SECURITY-REVIEW.md
+docs/BOOK-SEO-ART.md
+.claude/
+skills-lock.json
+tools/php.ini
+tools/composer
+tools/composer.phar
+indexpilot/tests/smoke/cli-result.json
