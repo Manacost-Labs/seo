@@ -216,7 +216,9 @@ final class QrCode {
 		$bits .= str_repeat( '0', ( 8 - strlen( $bits ) % 8 ) % 8 );
 		$data  = array_map( 'bindec', str_split( $bits, 8 ) );
 
-		for ( $pad = 0; count( $data ) < $capacity; $pad++ ) {
+		$filled = count( $data );
+
+		for ( $pad = 0; $filled + $pad < $capacity; $pad++ ) {
 			$data[] = 0 === $pad % 2 ? 0xEC : 0x11;
 		}
 

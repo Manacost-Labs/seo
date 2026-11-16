@@ -40,7 +40,7 @@ final class ReviewBox {
 	 * @param string   $post_type Тип записи.
 	 * @param \WP_Post $post      Запись.
 	 */
-	public function add( $post_type, $post = null ): void {
+	public function add( $post_type, $post = null ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- подпись хука add_meta_boxes.
 		if ( ! is_string( $post_type ) || ! is_post_type_viewable( $post_type ) || 'attachment' === $post_type ) {
 			return;
 		}
@@ -109,7 +109,7 @@ final class ReviewBox {
 	 * @param int      $post_id ID записи.
 	 * @param \WP_Post $post    Запись.
 	 */
-	public function save( $post_id, $post = null ): void {
+	public function save( $post_id, $post = null ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- подпись хука save_post.
 		if ( ! isset( $_POST['indexpilot_review_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['indexpilot_review_nonce'] ) ), self::NONCE ) ) {
 			return;
 		}

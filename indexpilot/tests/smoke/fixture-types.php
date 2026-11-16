@@ -32,3 +32,11 @@ add_filter( 'auto_update_core', '__return_false' );
 
 // На боевых сайтах работает классический редактор — тестовый сайт показывает панель так же.
 add_filter( 'use_block_editor_for_post', '__return_false' );
+
+// Замок закрытого текста, как Locker на kolodahearthstone.com: посетитель видит приглашение вместо текста.
+add_action(
+	'init',
+	static function (): void {
+		add_shortcode( 'sociallocker', static fn(): string => '<p>Поделитесь записью, чтобы открыть разбор.</p>' );
+	}
+);

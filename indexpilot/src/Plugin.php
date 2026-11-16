@@ -271,6 +271,7 @@ final class Plugin {
 					( new \IndexPilot\Admin\HeadInspector() )->register();
 					( new \IndexPilot\Admin\Reports\AuthorsReport() )->register();
 					( new \IndexPilot\Admin\ReviewBox() )->register();
+					( new \IndexPilot\Admin\Reports\AiReport( new \IndexPilot\Ai\VisitCounter( $this->db() ) ) )->register();
 					( new LinksReport( $this->link_scanner(), $this->link_reports() ) )->register();
 					( new \IndexPilot\Admin\Reports\ImagesReport() )->register();
 					( new SettingsPage( $this->settings(), $this->site_defaults(), $this->variables() ) )->register();
@@ -306,6 +307,9 @@ final class Plugin {
 		// на обычной странице запросов к базе нет. Журнал 404 пишется только на ответе 404.
 		( new RedirectHandler( $this->db() ) )->register();
 		( new AutoRedirect( array( $this, 'redirect_manager' ) ) )->register();
+
+		// Заходы роботов ассистентов и переходы из ассистентов: на обычной странице — только сравнение строк, без базы.
+		( new \IndexPilot\Ai\VisitCounter( $this->db() ) )->register();
 
 		// Самопроверка сайта и проверка внешних адресов: только по расписанию и по кнопке в админке.
 		$this->health()->register();

@@ -145,7 +145,7 @@ final class AuthorPages {
 		if ( array() !== $types ) {
 			$in = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- одна выборка при сохранении записи; список IN собран из заполнителей.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- одна выборка при сохранении записи; список IN собран из заполнителей.
 			$rows = (array) $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT p.ID, p.post_title, p.post_modified, p.comment_count, m.meta_value AS cornerstone FROM {$wpdb->posts} p LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s WHERE p.post_author = %d AND p.post_status = 'publish' AND p.post_password = '' AND p.post_type IN ($in) ORDER BY p.post_modified DESC LIMIT %d",

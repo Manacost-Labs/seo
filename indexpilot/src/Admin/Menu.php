@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Admin;
 
+use IndexPilot\Admin\Reports\AiReport;
 use IndexPilot\Admin\Reports\AuditReport;
 use IndexPilot\Admin\Reports\AuthorsReport;
 use IndexPilot\Admin\Reports\ImagesReport;
@@ -33,7 +34,7 @@ final class Menu {
 		),
 		array(
 			'promo',
-			array( 'indexpilot-promo-report', 'indexpilot-promo' ),
+			array( 'indexpilot-promo-report', 'indexpilot-promo', AiReport::SLUG ),
 		),
 		array(
 			'tech',

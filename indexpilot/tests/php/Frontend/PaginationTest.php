@@ -10,11 +10,41 @@ use PHPUnit\Framework\TestCase;
 final class PaginationTest extends TestCase {
 
 	public function test_neighbours(): void {
-		self::assertSame( array( 'prev' => 0, 'next' => 2 ), Pagination::neighbours( 1, 3 ) );
-		self::assertSame( array( 'prev' => 1, 'next' => 3 ), Pagination::neighbours( 2, 3 ) );
-		self::assertSame( array( 'prev' => 2, 'next' => 0 ), Pagination::neighbours( 3, 3 ) );
-		self::assertSame( array( 'prev' => 0, 'next' => 0 ), Pagination::neighbours( 1, 1 ) );
-		self::assertSame( array( 'prev' => 0, 'next' => 0 ), Pagination::neighbours( 1, 0 ) );
+		self::assertSame(
+			array(
+				'prev' => 0,
+				'next' => 2,
+			),
+			Pagination::neighbours( 1, 3 )
+		);
+		self::assertSame(
+			array(
+				'prev' => 1,
+				'next' => 3,
+			),
+			Pagination::neighbours( 2, 3 )
+		);
+		self::assertSame(
+			array(
+				'prev' => 2,
+				'next' => 0,
+			),
+			Pagination::neighbours( 3, 3 )
+		);
+		self::assertSame(
+			array(
+				'prev' => 0,
+				'next' => 0,
+			),
+			Pagination::neighbours( 1, 1 )
+		);
+		self::assertSame(
+			array(
+				'prev' => 0,
+				'next' => 0,
+			),
+			Pagination::neighbours( 1, 0 )
+		);
 	}
 
 	public function test_post_parts_and_urls(): void {
