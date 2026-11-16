@@ -44,11 +44,39 @@ final class MentionIndex {
 	private ?Mentions $mentions = null;
 
 	/**
+	 * Упоминания других игр.
+	 *
+	 * @var array<string, Mentions>
+	 */
+	private array $others = array();
+
+	/**
 	 * Конструктор.
 	 *
-	 * @param \Closure(): Lexicon $lexicon Игровой словарь; создаётся только при надобности.
+	 * @param \Closure(): Lexicon        $lexicon Игровой словарь; создаётся только при надобности.
+	 * @param (\Closure(): SiteGames)|null $games   Игры сайта: у записи другой игры свои классы и их страницы.
 	 */
-	public function __construct( private \Closure $lexicon ) {
+	public function __construct( private \Closure $lexicon, private ?\Closure $games = null ) {
+	}
+
+	/**
+	 * Упоминания для записи игры: у игры сайта по умолчанию — классы и архетипы, у другой игры — её классы
+	 * со страницами из её раздела.
+	 *
+	 * @param string $game Игра записи.
+	 */
+	public function mentions_for( string $game ): Mentions {
+		$games = null !== $this->games ? ( $this->games )() : null;
+
+		if ( null === $games || SiteGames::DEFAULT_GAME === $game ) {
+			return $this->mentions();
+		}
+
+		if ( ! isset( $this->others[ $game ] ) ) {
+			$this->others[ $game ] = new Mentions( $games->lexicon( $game ), (array) ( $this->data()['games'][ $game ] ?? array() ) );
+		}
+
+		return $this->others[ $game ];
 	}
 
 	/**
@@ -86,10 +114,12 @@ final class MentionIndex {
 			'built'      => time(),
 			'classes'    => $this->classes(),
 			'archetypes' => $this->archetypes(),
+			'games'      => $this->game_classes(),
 		);
 
 		update_option( self::OPTION, $data, false );
 		$this->mentions = null;
+		$this->others   = array();
 
 		return $data;
 	}
@@ -167,7 +197,8 @@ final class MentionIndex {
 	 * @return list<array{type: string, name: string, url: string}>
 	 */
 	private function store( \WP_Post $post ): array {
-		$items = $this->mentions()->find( self::text( $post ) );
+		$game  = null !== $this->games ? ( $this->games )()->post_game( $post ) : SiteGames::DEFAULT_GAME;
+		$items = $this->mentions_for( $game )->find( self::text( $post ) );
 
 		update_post_meta(
 			$post->ID,
@@ -200,8 +231,21 @@ final class MentionIndex {
 		);
 		$lexicon  = ( $this->lexicon )();
 		$result   = array();
+		$games    = null !== $this->games ? ( $this->games )() : null;
+		$skip     = array();
+
+		// Рубрики раздела другой игры («World of Warcraft → Жрец») — не страницы классов этой игры.
+		if ( null !== $games && 'category' === $taxonomy ) {
+			foreach ( array_keys( $games->roots() ) as $game ) {
+				$skip += array_fill_keys( $games->section_terms( $game ), true );
+			}
+		}
 
 		foreach ( is_array( $terms ) ? $terms : array() as $term ) {
+			if ( isset( $skip[ (int) $term->term_id ] ) ) {
+				continue;
+			}
+
 			$classes = $lexicon->classes( $term->name );
 			$words   = preg_split( '/\s+/u', trim( $term->name ) );
 
@@ -215,6 +259,56 @@ final class MentionIndex {
 			if ( is_string( $url ) ) {
 				$result[ $classes[0] ] = $url;
 			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Страницы классов других игр: рубрики их разделов с названием класса или специализации («Жрец», «Тьма»).
+	 * Берётся самая общая рубрика: «Жрец» важнее вложенного «Жрец → Гайды».
+	 *
+	 * @return array<string, array<string, string>> Игра => слаг класса из словаря => адрес.
+	 */
+	private function game_classes(): array {
+		$games  = null !== $this->games ? ( $this->games )() : null;
+		$result = array();
+
+		foreach ( null !== $games ? array_keys( $games->roots() ) : array() as $game ) {
+			$ids = $games->section_terms( $game );
+
+			if ( array() === $ids ) {
+				continue;
+			}
+
+			$terms   = get_terms(
+				array(
+					'taxonomy'   => 'category',
+					'include'    => $ids,
+					'hide_empty' => false,
+					'orderby'    => 'term_id',
+				)
+			);
+			$lexicon = $games->lexicon( $game );
+			$parents = $games->parents();
+			$found   = array();
+
+			foreach ( is_array( $terms ) ? $terms : array() as $term ) {
+				$classes = $lexicon->classes( html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ) );
+				$depth   = count( GameScope::ancestry( array( (int) $term->term_id ), $parents )[ (int) $term->term_id ] );
+				$url     = get_term_link( $term );
+
+				if ( 1 !== count( $classes ) || ! is_string( $url ) || ( isset( $found[ $classes[0] ] ) && $found[ $classes[0] ]['depth'] <= $depth ) ) {
+					continue;
+				}
+
+				$found[ $classes[0] ] = array(
+					'depth' => $depth,
+					'url'   => $url,
+				);
+			}
+
+			$result[ $game ] = array_map( static fn( array $item ): string => $item['url'], $found );
 		}
 
 		return $result;

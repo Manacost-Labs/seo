@@ -433,7 +433,7 @@ final class Plugin {
 		add_action(
 			'parse_request',
 			function (): void {
-				( new LlmsOutput( $this->resolver(), $this->settings(), new SitemapCache() ) )->handle();
+				( new LlmsOutput( $this->resolver(), $this->settings(), new SitemapCache(), $this->game()->games() ) )->handle();
 				// Любая открытая запись в Markdown по адресу с «.md» на конце.
 				( new \IndexPilot\Llms\MarkdownOutput( $this->resolver(), $this->settings() ) )->handle();
 			},
@@ -504,7 +504,7 @@ final class Plugin {
 	 */
 	public function analyzer(): Analyzer {
 		if ( null === $this->analyzer ) {
-			$this->analyzer = new Analyzer( null, new KeywordMatcher( new RussianStemmer(), new EnglishStemmer(), $this->lexicon() ) );
+			$this->analyzer = new Analyzer( null, new KeywordMatcher( new RussianStemmer(), new EnglishStemmer(), $this->lexicon() ), fn( string $game ): KeywordMatcher => $this->game()->games()->matcher( $game ) );
 		}
 
 		return $this->analyzer;
@@ -702,7 +702,7 @@ final class Plugin {
 		global $wpdb;
 
 		// Отпечаток словаря: после правки своих синонимов (и после смены устройства словаря) индекс заголовков строится заново.
-		return new SuggestionIndex( $wpdb, new Suggester( $this->analyzer()->matcher() ), $this->redirected_posts(), md5( 'lexicon-1|' . (string) $this->settings()->general( 'custom_synonyms' ) ) );
+		return new SuggestionIndex( $wpdb, new Suggester( $this->analyzer()->matcher() ), $this->redirected_posts(), md5( 'lexicon-2|' . (string) $this->settings()->general( 'custom_synonyms' ) . '|' . (int) $this->settings()->general( 'wow_root_term' ) ), $this->game()->games() );
 	}
 
 	/**
@@ -787,7 +787,7 @@ final class Plugin {
 	public function papers(): PaperFactory {
 		global $wpdb;
 
-		return new PaperFactory( $this->resolver(), $this->settings(), $this->redirects(), $this->redirected_posts(), new AuthorProfile(), new PartnerClient( $this->settings() ), new KeywordUsage( $wpdb, $this->analyzer()->matcher() ) );
+		return new PaperFactory( $this->resolver(), $this->settings(), $this->redirects(), $this->redirected_posts(), new AuthorProfile(), new PartnerClient( $this->settings() ), new KeywordUsage( $wpdb, $this->analyzer()->matcher() ), $this->game()->games() );
 	}
 
 	/**

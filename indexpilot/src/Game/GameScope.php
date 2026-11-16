@@ -60,10 +60,10 @@ final class GameScope {
 	 * Записи с одинаковым основным ключом в разных играх.
 	 *
 	 * @param list<array{post_id: int|string, keyword: string, game: string}> $rows    Строки: ID записи, ключ, игра (пусто — игра по умолчанию).
-	 * @param string                                                          $default Игра по умолчанию.
+	 * @param string                                                          $default_game Игра по умолчанию.
 	 * @return list<array{keyword: string, posts: list<int>}>
 	 */
-	public static function cross_game_groups( array $rows, string $default ): array {
+	public static function cross_game_groups( array $rows, string $default_game ): array {
 		$groups = array();
 
 		foreach ( $rows as $row ) {
@@ -73,7 +73,7 @@ final class GameScope {
 				continue;
 			}
 
-			$game = '' !== (string) ( $row['game'] ?? '' ) ? (string) $row['game'] : $default;
+			$game = '' !== (string) ( $row['game'] ?? '' ) ? (string) $row['game'] : $default_game;
 
 			$groups[ $keyword ]['games'][ $game ] = true;
 			$groups[ $keyword ]['posts'][]        = (int) $row['post_id'];
@@ -107,8 +107,10 @@ final class GameScope {
 			$chain  = array();
 			$seen   = array( (int) $term_id => true );
 			$parent = (int) ( $parents[ (int) $term_id ] ?? 0 );
+			$depth  = 0;
 
-			while ( $parent > 0 && ! isset( $seen[ $parent ] ) && count( $chain ) < self::MAX_DEPTH ) {
+			while ( $parent > 0 && ! isset( $seen[ $parent ] ) && $depth < self::MAX_DEPTH ) {
+				++$depth;
 				$seen[ $parent ] = true;
 				$chain[]         = $parent;
 				$parent          = (int) ( $parents[ $parent ] ?? 0 );

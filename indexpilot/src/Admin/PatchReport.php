@@ -10,7 +10,6 @@ declare( strict_types=1 );
 namespace IndexPilot\Admin;
 
 use IndexPilot\Game\DeckVariables;
-use IndexPilot\Game\MaterialType;
 use IndexPilot\Game\Module;
 use IndexPilot\Game\PostMaterial;
 use IndexPilot\Resolver\PostDates;
@@ -114,7 +113,7 @@ final class PatchReport {
 				esc_html( '' !== $post->post_title ? wp_strip_all_tags( $post->post_title ) : __( '(без названия)', 'indexpilot' ) ),
 				esc_url( (string) get_permalink( $post ) ),
 				esc_html__( 'открыть', 'indexpilot' ),
-				esc_html( MaterialType::label( PostMaterial::detect( $post ) ) ),
+				esc_html( PostMaterial::label( $post ) ),
 				esc_html( PostDates::modified( (string) get_option( 'date_format' ), false, $post, true ) )
 			);
 		}

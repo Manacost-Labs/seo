@@ -65,6 +65,7 @@ json_check health-check.php
 json_check promo-check.php
 json_check content-check.php
 json_check answers-check.php
+json_check wow-check.php
 json_check doctor-check.php
 
 # Карта сайта, robots.txt и файл ключа проверяются последними: к этому моменту есть записи с noindex, под паролем и под редиректом.

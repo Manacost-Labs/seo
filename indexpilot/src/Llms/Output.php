@@ -13,6 +13,7 @@ use IndexPilot\Game\Hub;
 use IndexPilot\Game\MaterialType;
 use IndexPilot\Game\Module;
 use IndexPilot\Game\PostMaterial;
+use IndexPilot\Game\SiteGames;
 use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Resolver\Context;
 use IndexPilot\Resolver\MetaResolver;
@@ -43,11 +44,13 @@ final class Output {
 	 * @param MetaResolver $resolver Резолвер: описание страницы и её индексация.
 	 * @param Settings     $settings Настройки.
 	 * @param Cache        $cache    Кэш: сбрасывается вместе с картой сайта при изменении записей.
+	 * @param SiteGames|null $games  Игры сайта: у раздела другой игры своя часть файла.
 	 */
 	public function __construct(
 		private MetaResolver $resolver,
 		private Settings $settings,
-		private Cache $cache
+		private Cache $cache,
+		private ?SiteGames $games = null
 	) {
 	}
 
@@ -86,7 +89,8 @@ final class Output {
 					__( 'Классы', 'indexpilot' )   => $this->terms( Hub::CLASS_TAXONOMY, self::MAX_TERMS ),
 					__( 'Архетипы', 'indexpilot' ) => $this->terms( Module::ARCHETYPE, self::MAX_ARCHETYPES ),
 					__( 'Разделы', 'indexpilot' )  => $this->sections(),
-					__( 'Авторы', 'indexpilot' )   => $this->authors(),
+				) + $this->game_sections() + array(
+					__( 'Авторы', 'indexpilot' ) => $this->authors(),
 				)
 			)
 		);
@@ -136,6 +140,43 @@ final class Output {
 	 * @return list<array{title: string, url: string, description: string}>
 	 */
 	private function sections(): array {
+		$exclude = array();
+
+		// Рубрики разделов других игр идут своими частями файла.
+		foreach ( null !== $this->games ? array_keys( $this->games->roots() ) : array() as $game ) {
+			$exclude = array_merge( $exclude, $this->games->section_terms( $game ) );
+		}
+
+		return $this->categories( $exclude, array() );
+	}
+
+	/**
+	 * Части файла по другим играм: «World of Warcraft» — рубрики её раздела.
+	 *
+	 * @return array<string, list<array{title: string, url: string, description: string}>>
+	 */
+	private function game_sections(): array {
+		$sections = array();
+
+		foreach ( null !== $this->games ? array_keys( $this->games->roots() ) : array() as $game ) {
+			$ids = $this->games->section_terms( $game );
+
+			if ( array() !== $ids ) {
+				$sections[ $this->games->name( $game ) ] = $this->categories( array(), $ids );
+			}
+		}
+
+		return $sections;
+	}
+
+	/**
+	 * Самые наполненные рубрики, открытые для индексации.
+	 *
+	 * @param list<int> $exclude Какие рубрики пропустить.
+	 * @param list<int> $only    Только эти рубрики; пусто — все.
+	 * @return list<array{title: string, url: string, description: string}>
+	 */
+	private function categories( array $exclude, array $only ): array {
 		$terms = get_terms(
 			array(
 				'taxonomy'   => 'category',
@@ -143,6 +184,8 @@ final class Output {
 				'orderby'    => 'count',
 				'order'      => 'DESC',
 				'number'     => self::MAX_TERMS,
+				'exclude'    => $exclude,
+				'include'    => $only,
 			)
 		);
 

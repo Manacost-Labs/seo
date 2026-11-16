@@ -41,10 +41,10 @@ final class KeywordUsage {
 	 * @param int    $limit       Сколько записей вернуть.
 	 * @param bool   $public_only Пропускать записи под паролем.
 	 * @param string $game        Игра записи: записи других игр ключ не занимают; пусто — все игры.
-	 * @param string $default     Игра записей без отметки игры.
+	 * @param string $default_game     Игра записей без отметки игры.
 	 * @return list<int>
 	 */
-	public function posts( string $keyword, int $exclude = 0, int $limit = 3, bool $public_only = false, string $game = '', string $default = '' ): array {
+	public function posts( string $keyword, int $exclude = 0, int $limit = 3, bool $public_only = false, string $game = '', string $default_game = '' ): array {
 		$keyword = trim( $keyword );
 
 		if ( '' === $keyword || $limit <= 0 ) {
@@ -70,7 +70,7 @@ final class KeywordUsage {
 		);
 		// phpcs:enable
 
-		return self::matching( (array) $rows, $keyword, $this->matcher, $limit, $game, $default );
+		return self::matching( (array) $rows, $keyword, $this->matcher, $limit, $game, $default_game );
 	}
 
 	/**
@@ -81,10 +81,10 @@ final class KeywordUsage {
 	 * @param KeywordMatcher    $matcher Сравнение ключей.
 	 * @param int               $limit   Сколько записей вернуть.
 	 * @param string            $game    Игра: строки других игр пропускаются; пусто — все игры.
-	 * @param string            $default Игра строк без отметки игры.
+	 * @param string            $default_game Игра строк без отметки игры.
 	 * @return list<int>
 	 */
-	public static function matching( array $rows, string $keyword, KeywordMatcher $matcher, int $limit, string $game = '', string $default = '' ): array {
+	public static function matching( array $rows, string $keyword, KeywordMatcher $matcher, int $limit, string $game = '', string $default_game = '' ): array {
 		$found = array();
 		$known = array();
 
@@ -96,7 +96,9 @@ final class KeywordUsage {
 			}
 
 			// «Гайд на жреца» в World of Warcraft не занимает тот же ключ в Hearthstone.
-			if ( '' !== $game && $game !== ( '' !== (string) ( $row['game'] ?? '' ) ? (string) $row['game'] : $default ) ) {
+			$row_game = '' !== (string) ( $row['game'] ?? '' ) ? (string) $row['game'] : $default_game;
+
+			if ( '' !== $game && $row_game !== $game ) {
 				continue;
 			}
 

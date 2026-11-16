@@ -156,7 +156,8 @@ final class MetaResolver {
 				return $this->settings->post_type( $context->subtype );
 
 			case Context::TERM:
-				return $this->settings->taxonomy( $context->subtype );
+				// Рубрики раздела другой игры (World of Warcraft) получают свои шаблоны.
+				return (array) $this->filter( 'indexpilot_term_config', $this->settings->taxonomy( $context->subtype ), $context );
 
 			default:
 				return $this->settings->special( $context->type );
