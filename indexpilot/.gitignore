@@ -1,0 +1,6 @@
+vendor/
+node_modules/
+build/
+.phpunit.result.cache
+tests/smoke/result.json
+tests/smoke/urls.json

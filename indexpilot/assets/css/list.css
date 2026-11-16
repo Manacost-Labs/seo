@@ -1,0 +1,45 @@
+/* Колонка IndexPilot в списке записей. */
+
+.column-indexpilot {
+	width: 110px;
+}
+
+.column-indexpilot .indexpilot-score {
+	display: inline-block;
+	min-width: 22px;
+	padding: 0 6px;
+	border-radius: 10px;
+	background: #646970;
+	color: #fff;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 20px;
+	text-align: center;
+}
+
+.column-indexpilot .indexpilot-score[data-level="good"] {
+	background: #008a20;
+}
+
+.column-indexpilot .indexpilot-score[data-level="ok"] {
+	background: #bd8600;
+}
+
+.column-indexpilot .indexpilot-score[data-level="bad"] {
+	background: #d63638;
+}
+
+.column-indexpilot .indexpilot-flag {
+	display: block;
+	margin-top: 4px;
+	color: #b32d2e;
+	font-size: 12px;
+}
+
+.column-indexpilot .indexpilot-flag[data-flag="redirect"] {
+	color: #996800;
+}
+
+.column-indexpilot .indexpilot-flag[data-flag="noindex"] {
+	color: #646970;
+}

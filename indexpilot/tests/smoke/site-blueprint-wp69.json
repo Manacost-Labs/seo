@@ -1,0 +1,21 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"preferredVersions": {
+		"php": "8.4",
+		"wp": "6.9"
+	},
+	"steps": [
+		{
+			"step": "runPHP",
+			"code": "<?php @mkdir('/wordpress/wp-content/mu-plugins', 0777, true); file_put_contents('/wordpress/wp-content/mu-plugins/indexpilot-fixture.php', \"<?php require '/wordpress/wp-content/plugins/indexpilot/tests/smoke/fixture-types.php';\");"
+		},
+		{
+			"step": "activatePlugin",
+			"pluginPath": "indexpilot/indexpilot.php"
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php require '/wordpress/wp-load.php'; require '/wordpress/wp-content/plugins/indexpilot/tests/smoke/setup-site.php';"
+		}
+	]
+}

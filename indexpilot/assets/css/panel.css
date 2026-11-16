@@ -1,0 +1,466 @@
+/* Панель IndexPilot в редакторе записи. Все правила ограничены контейнером панели. */
+
+.indexpilot-panel {
+	--indexpilot-good: #008a20;
+	--indexpilot-ok: #bd8600;
+	--indexpilot-bad: #d63638;
+	--indexpilot-muted: #646970;
+}
+
+.indexpilot-panel .indexpilot-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 0 0 12px;
+	border-bottom: 1px solid #c3c4c7;
+}
+
+.indexpilot-panel .indexpilot-tab {
+	margin: 0 0 -1px;
+	padding: 8px 14px;
+	border: 1px solid transparent;
+	border-bottom: 0;
+	border-radius: 3px 3px 0 0;
+	background: none;
+	color: #1d2327;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.indexpilot-panel .indexpilot-tab:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: -2px;
+}
+
+.indexpilot-panel .indexpilot-tab.is-active {
+	border-color: #c3c4c7;
+	background: #fff;
+	font-weight: 600;
+}
+
+.indexpilot-panel .indexpilot-pane[hidden] {
+	display: none;
+}
+
+.indexpilot-panel .indexpilot-field {
+	margin: 0 0 14px;
+}
+
+.indexpilot-panel .indexpilot-field > label {
+	display: block;
+	margin-bottom: 4px;
+	font-weight: 600;
+}
+
+.indexpilot-panel .indexpilot-field .description {
+	display: block;
+	margin-top: 4px;
+}
+
+/* Значок оценки */
+
+.indexpilot-panel .indexpilot-score {
+	display: inline-block;
+	min-width: 22px;
+	margin-inline-start: 6px;
+	padding: 0 6px;
+	border-radius: 10px;
+	background: var(--indexpilot-muted);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 20px;
+	text-align: center;
+}
+
+.indexpilot-panel .indexpilot-score[data-level="good"] {
+	background: var(--indexpilot-good);
+}
+
+.indexpilot-panel .indexpilot-score[data-level="ok"] {
+	background: var(--indexpilot-ok);
+}
+
+.indexpilot-panel .indexpilot-score[data-level="bad"] {
+	background: var(--indexpilot-bad);
+}
+
+/* Предпросмотр выдачи */
+
+.indexpilot-panel .indexpilot-preview-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.indexpilot-panel .indexpilot-devices .button.is-active {
+	border-color: #2271b1;
+	background: #f0f6fc;
+	color: #0a4b78;
+}
+
+.indexpilot-panel .indexpilot-serp {
+	box-sizing: border-box;
+	max-width: 640px;
+	margin-bottom: 16px;
+	padding: 14px 16px;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	background: #fff;
+	font-family: Arial, sans-serif;
+	transition: opacity 0.15s;
+}
+
+.indexpilot-panel .indexpilot-serp[data-device="mobile"] {
+	max-width: 390px;
+}
+
+.indexpilot-panel.is-loading .indexpilot-serp {
+	opacity: 0.6;
+}
+
+.indexpilot-panel .indexpilot-serp-site {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 6px;
+	color: #202124;
+	font-size: 14px;
+	line-height: 1.3;
+}
+
+.indexpilot-panel .indexpilot-serp-icon {
+	display: flex;
+	flex: 0 0 28px;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	overflow: hidden;
+	border-radius: 50%;
+	background: #f1f3f4;
+}
+
+.indexpilot-panel .indexpilot-serp-icon img {
+	width: 18px;
+	height: 18px;
+}
+
+.indexpilot-panel .indexpilot-serp-name,
+.indexpilot-panel .indexpilot-serp-url {
+	display: block;
+}
+
+.indexpilot-panel .indexpilot-serp-url {
+	color: #4d5156;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+.indexpilot-panel .indexpilot-serp-title {
+	margin-bottom: 4px;
+	color: #1a0dab;
+	font-size: 20px;
+	line-height: 1.3;
+}
+
+.indexpilot-panel .indexpilot-serp[data-device="desktop"] .indexpilot-serp-title {
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.indexpilot-panel .indexpilot-serp-description {
+	color: #4d5156;
+	font-size: 14px;
+	line-height: 1.58;
+}
+
+.indexpilot-panel .indexpilot-serp-description.is-empty {
+	color: var(--indexpilot-bad);
+	font-style: italic;
+}
+
+/* Полосы заполнения */
+
+.indexpilot-panel .indexpilot-meter {
+	display: block;
+	height: 4px;
+	margin-top: 4px;
+	overflow: hidden;
+	border-radius: 2px;
+	background: #dcdcde;
+}
+
+.indexpilot-panel .indexpilot-meter-fill {
+	display: block;
+	width: 0;
+	height: 100%;
+	background: var(--indexpilot-ok);
+	transition: width 0.15s;
+}
+
+.indexpilot-panel .indexpilot-meter-fill[data-state="good"] {
+	background: var(--indexpilot-good);
+}
+
+.indexpilot-panel .indexpilot-meter-fill[data-state="bad"] {
+	background: var(--indexpilot-bad);
+}
+
+.indexpilot-panel .indexpilot-counter {
+	display: block;
+	margin-top: 2px;
+	color: var(--indexpilot-muted);
+	font-size: 12px;
+}
+
+.indexpilot-panel .indexpilot-variables {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 6px;
+}
+
+.indexpilot-panel .indexpilot-variable {
+	font-family: Consolas, Monaco, monospace;
+	font-size: 11px;
+}
+
+/* Список проверок */
+
+.indexpilot-panel [data-indexpilot-analysis] h4 {
+	margin: 14px 0 6px;
+}
+
+.indexpilot-panel .indexpilot-checks {
+	margin: 0;
+}
+
+.indexpilot-panel .indexpilot-checks li {
+	position: relative;
+	margin: 0 0 6px;
+	padding-inline-start: 20px;
+}
+
+.indexpilot-panel .indexpilot-checks li::before {
+	position: absolute;
+	inset-inline-start: 2px;
+	top: 5px;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--indexpilot-muted);
+	content: "";
+}
+
+.indexpilot-panel .indexpilot-checks li[data-status="good"]::before {
+	background: var(--indexpilot-good);
+}
+
+.indexpilot-panel .indexpilot-checks li[data-status="ok"]::before {
+	background: var(--indexpilot-ok);
+}
+
+.indexpilot-panel .indexpilot-checks li[data-status="bad"]::before {
+	background: var(--indexpilot-bad);
+}
+
+.indexpilot-panel .indexpilot-suggestions {
+	margin: 0;
+}
+
+.indexpilot-panel .indexpilot-suggestions li {
+	margin: 0 0 6px;
+}
+
+.indexpilot-panel .indexpilot-error {
+	color: var(--indexpilot-bad);
+}
+
+/* Карточка соцсетей */
+
+.indexpilot-panel .indexpilot-card {
+	box-sizing: border-box;
+	max-width: 520px;
+	margin-bottom: 16px;
+	overflow: hidden;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	background: #f6f7f7;
+}
+
+.indexpilot-panel .indexpilot-card-image {
+	aspect-ratio: 1200 / 630;
+	background: #dcdcde;
+}
+
+.indexpilot-panel .indexpilot-card-image img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.indexpilot-panel .indexpilot-card-host,
+.indexpilot-panel .indexpilot-card-title,
+.indexpilot-panel .indexpilot-card-description {
+	padding: 0 12px;
+}
+
+.indexpilot-panel .indexpilot-card-host {
+	padding-top: 10px;
+	color: var(--indexpilot-muted);
+	font-size: 12px;
+	text-transform: uppercase;
+}
+
+.indexpilot-panel .indexpilot-card-title {
+	padding-top: 2px;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.indexpilot-panel .indexpilot-card-description {
+	padding-bottom: 12px;
+	color: #50575e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.indexpilot-panel .indexpilot-serp,
+	.indexpilot-panel .indexpilot-meter-fill {
+		transition: none;
+	}
+}
+
+/* Вкладка «Содержание» */
+
+.indexpilot-panel .indexpilot-label {
+	display: block;
+	margin-bottom: 4px;
+	font-weight: 600;
+}
+
+.indexpilot-panel .indexpilot-counter[data-state="good"] {
+	color: var(--indexpilot-good);
+}
+
+.indexpilot-panel .indexpilot-counter[data-state="ok"] {
+	color: var(--indexpilot-ok);
+}
+
+.indexpilot-panel .indexpilot-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: 6px 0;
+}
+
+.indexpilot-panel .indexpilot-actions[hidden] {
+	display: none;
+}
+
+.indexpilot-panel .indexpilot-status {
+	color: var(--indexpilot-muted);
+	font-size: 12px;
+}
+
+.indexpilot-panel .indexpilot-faq-row {
+	margin-bottom: 8px;
+	padding: 8px 10px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #f6f7f7;
+}
+
+.indexpilot-panel .indexpilot-faq-row textarea {
+	margin-top: 4px;
+}
+
+.indexpilot-panel [data-indexpilot-blurb-text] {
+	margin-top: 4px;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+}
+
+/* Тип материала над списком проверок */
+
+.indexpilot-panel .indexpilot-material {
+	margin: 0 0 8px;
+}
+
+.indexpilot-panel .indexpilot-material .description {
+	display: block;
+	margin-top: 2px;
+}
+
+/* Неизвестная переменная шаблона в предпросмотре */
+
+.indexpilot-panel .indexpilot-warning {
+	margin: 0 0 12px;
+	color: var(--indexpilot-bad);
+}
+
+.indexpilot-panel mark.indexpilot-unknown {
+	padding: 0 2px;
+	background: #fcf0f1;
+	color: var(--indexpilot-bad);
+}
+
+/* Значок «?» с подсказкой: что вписать и зачем. Показывается при наведении и при переходе клавишей Tab. */
+.indexpilot-help {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	margin-left: 4px;
+	border-radius: 50%;
+	background: #dcdcde;
+	color: #1d2327;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	vertical-align: middle;
+	cursor: help;
+}
+
+.indexpilot-help:hover,
+.indexpilot-help:focus {
+	background: #2271b1;
+	color: #fff;
+	outline: none;
+}
+
+.indexpilot-help::after {
+	content: attr(data-tip);
+	position: absolute;
+	top: calc(100% + 6px);
+	left: -8px;
+	z-index: 100;
+	width: max-content;
+	max-width: min(340px, 70vw);
+	padding: 10px 12px;
+	border-radius: 4px;
+	background: #1d2327;
+	color: #fff;
+	font-size: 12px;
+	font-weight: 400;
+	line-height: 1.5;
+	text-align: left;
+	white-space: pre-line;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+	visibility: hidden;
+	opacity: 0;
+	transition: opacity 0.1s;
+	pointer-events: none;
+}
+
+.indexpilot-help:hover::after,
+.indexpilot-help:focus::after {
+	visibility: visible;
+	opacity: 1;
+}

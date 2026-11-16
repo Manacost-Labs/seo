@@ -1,0 +1,345 @@
+<?php
+/**
+ * Страница «Короткие ссылки».
+ *
+ * @package IndexPilot
+ */
+
+declare( strict_types=1 );
+
+namespace IndexPilot\Admin;
+
+use IndexPilot\Plugin;
+use IndexPilot\ShortLinks\Router;
+use IndexPilot\ShortLinks\Service;
+use IndexPilot\ShortLinks\Store;
+
+/**
+ * Свои короткие ссылки: создание, список со счётчиком переходов, удаление.
+ * Формы — обычные запросы с nonce: страница работает и без JavaScript (скрипт добавляет только копирование адреса).
+ */
+final class ShortLinksPage {
+
+	public const SLUG = 'indexpilot-shortlinks';
+
+	private const NONCE    = 'indexpilot_shortlinks';
+	private const CAP      = 'edit_others_posts';
+	private const PER_PAGE = 100;
+
+	/**
+	 * Сообщение о результате последнего действия: текст и вид (success или error).
+	 *
+	 * @var array{0: string, 1: string}|null
+	 */
+	private ?array $notice = null;
+
+	/**
+	 * Конструктор.
+	 *
+	 * @param Service $service Правила коротких ссылок.
+	 * @param Store   $store   Хранилище ссылок.
+	 * @param ?\IndexPilot\ShortLinks\ClickLog $click_log Журнал переходов.
+	 * @param Router  $router  Адреса коротких ссылок.
+	 */
+	public function __construct( private Service $service, private Store $store, private Router $router, private ?\IndexPilot\ShortLinks\ClickLog $click_log = null ) {
+	}
+
+	/**
+	 * Подключает страницу.
+	 */
+	public function register(): void {
+		add_action( 'admin_menu', array( $this, 'add' ), 16 );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+	}
+
+	/**
+	 * Добавляет пункт меню и обрабатывает формы страницы до её вывода.
+	 */
+	public function add(): void {
+		$hook = add_submenu_page(
+			SettingsPage::SLUG,
+			__( 'IndexPilot — короткие ссылки', 'indexpilot' ),
+			__( 'Короткие ссылки', 'indexpilot' ),
+			self::CAP,
+			self::SLUG,
+			array( $this, 'render' )
+		);
+
+		if ( is_string( $hook ) ) {
+			add_action( 'load-' . $hook, array( $this, 'handle' ) );
+		}
+	}
+
+	/**
+	 * Подключает скрипт копирования адреса на этой странице и в редакторе записи.
+	 *
+	 * @param string $hook Текущий экран админки.
+	 */
+	public function enqueue( $hook ): void {
+		if ( str_ends_with( (string) $hook, '_page_' . self::SLUG ) || in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
+			wp_enqueue_script( 'indexpilot-search', plugins_url( 'assets/js/search.js', INDEXPILOT_FILE ), array( 'wp-api-fetch' ), Plugin::VERSION, true );
+			wp_localize_script( 'indexpilot-search', 'IndexPilotSearch', array( 'copied' => __( 'Скопировано', 'indexpilot' ) ) );
+		}
+	}
+
+	/**
+	 * Создаёт или удаляет ссылку по запросу формы.
+	 */
+	public function handle(): void {
+		if ( ! isset( $_POST['indexpilot_shortlink_action'] ) ) {
+			return;
+		}
+
+		check_admin_referer( self::NONCE );
+
+		if ( ! current_user_can( self::CAP ) ) {
+			wp_die( esc_html__( 'Недостаточно прав.', 'indexpilot' ), 403 );
+		}
+
+		if ( 'delete' === $_POST['indexpilot_shortlink_action'] ) {
+			$this->store->delete( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0 );
+			$this->notice = array( __( 'Ссылка удалена.', 'indexpilot' ), 'success' );
+
+			return;
+		}
+
+		$target = isset( $_POST['target'] ) ? esc_url_raw( trim( (string) wp_unslash( $_POST['target'] ) ) ) : '';
+		$slug   = isset( $_POST['slug'] ) ? sanitize_text_field( wp_unslash( $_POST['slug'] ) ) : '';
+		$code   = isset( $_POST['code'] ) ? absint( wp_unslash( $_POST['code'] ) ) : 302;
+		if ( 'update' === $_POST['indexpilot_shortlink_action'] ) {
+			$result       = $this->service->update_target( isset( $_POST['link_id'] ) ? absint( wp_unslash( $_POST['link_id'] ) ) : 0, $target );
+			$this->notice = true === $result ? array( __( 'Адрес обновлён.', 'indexpilot' ), 'success' ) : array( is_string( $result ) ? $this->error_text( $result ) : __( 'Не удалось обновить адрес.', 'indexpilot' ), 'error' );
+			return;
+		}
+		$utm = array();
+		foreach ( array( 'source', 'medium', 'campaign' ) as $key ) {
+			$utm[ $key ] = isset( $_POST[ 'utm_' . $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'utm_' . $key ] ) ) : '';
+		}
+		$campaign = isset( $_POST['campaign'] ) ? sanitize_text_field( wp_unslash( $_POST['campaign'] ) ) : '';
+		$expiry   = isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : '';
+		$result   = $this->service->create( $target, $slug, $code, $utm, $campaign, $expiry );
+
+		if ( is_string( $result ) ) {
+			$this->notice = array( $this->error_text( $result ), 'error' );
+		} else {
+			/* translators: %s: короткий адрес. */
+			$this->notice = array( sprintf( __( 'Ссылка создана: %s', 'indexpilot' ), $this->router->url( $result['slug'] ) ), 'success' );
+		}
+	}
+
+	/**
+	 * Печатает страницу.
+	 */
+	public function render(): void {
+		if ( ! current_user_can( self::CAP ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- фильтр только читает данные.
+		$campaign = isset( $_GET['campaign'] ) ? sanitize_text_field( wp_unslash( $_GET['campaign'] ) ) : '';
+		$links    = $this->store->all( self::PER_PAGE, 0, '' === $campaign ? null : $campaign );
+		$total    = $this->store->count();
+		?>
+		<div class="wrap" data-indexpilot-shortlinks>
+			<h1><?php esc_html_e( 'IndexPilot — короткие ссылки', 'indexpilot' ); ?></h1>
+
+			<?php if ( null !== $this->notice ) : ?>
+				<div class="notice notice-<?php echo esc_attr( $this->notice[1] ); ?>"><p><?php echo esc_html( $this->notice[0] ); ?></p></div>
+			<?php endif; ?>
+
+			<p>
+				<?php
+				/* translators: %s: пример короткого адреса записи. */
+				echo esc_html( sprintf( __( 'У каждой опубликованной записи короткий адрес есть сразу, создавать его не нужно: он показан в панели IndexPilot в редакторе записи, вкладка «Дополнительно» (пример: %s). Здесь создаются короткие ссылки на любые другие адреса — стрим, видео, турнир, партнёрскую страницу — со счётчиком переходов.', 'indexpilot' ), $this->router->url( 'p1a' ) ) );
+				?>
+			</p>
+
+			<h2><?php esc_html_e( 'Новая ссылка', 'indexpilot' ); ?></h2>
+			<form method="post">
+				<?php wp_nonce_field( self::NONCE ); ?>
+				<input type="hidden" name="indexpilot_shortlink_action" value="create">
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="indexpilot-shortlink-target"><?php esc_html_e( 'Куда ведёт', 'indexpilot' ); ?></label></th>
+						<td><input type="url" class="large-text" id="indexpilot-shortlink-target" name="target" required placeholder="https://www.twitch.tv/…"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="indexpilot-shortlink-slug"><?php esc_html_e( 'Код ссылки', 'indexpilot' ); ?></label></th>
+						<td>
+							<code><?php echo esc_html( $this->router->url( '' ) ); ?></code>
+							<input type="text" class="regular-text" id="indexpilot-shortlink-slug" name="slug" pattern="[A-Za-z0-9][A-Za-z0-9_\-]{1,63}" placeholder="twitch">
+							<p class="description"><?php esc_html_e( 'Латинские буквы, цифры, дефис. Пусто — будет выдан случайный код из шести символов.', 'indexpilot' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="indexpilot-shortlink-code"><?php esc_html_e( 'Перенаправление', 'indexpilot' ); ?></label></th>
+						<td>
+							<select id="indexpilot-shortlink-code" name="code">
+								<option value="302"><?php esc_html_e( '302 — временное: каждый переход засчитывается', 'indexpilot' ); ?></option>
+								<option value="301"><?php esc_html_e( '301 — постоянное: браузер запоминает адрес, счётчик неполный', 'indexpilot' ); ?></option>
+								<option value="307"><?php esc_html_e( '307 — временное, с сохранением метода запроса', 'indexpilot' ); ?></option>
+							</select>
+						</td>
+					</tr>
+				</table>
+				<p><label for="ip-utm_source"><?php esc_html_e( 'UTM: источник', 'indexpilot' ); ?></label> <input id="ip-utm_source" name="utm_source" type="text"></p>
+<p><label for="ip-utm_medium"><?php esc_html_e( 'UTM: канал', 'indexpilot' ); ?></label> <input id="ip-utm_medium" name="utm_medium" type="text"></p>
+<p><label for="ip-utm_campaign"><?php esc_html_e( 'UTM: метка кампании', 'indexpilot' ); ?></label> <input id="ip-utm_campaign" name="utm_campaign" type="text"></p>
+<p><label for="ip-campaign"><?php esc_html_e( 'Название кампании', 'indexpilot' ); ?></label> <input id="ip-campaign" name="campaign" type="text"></p>
+<p><label for="ip-expires_at"><?php esc_html_e( 'Действует до (UTC)', 'indexpilot' ); ?></label> <input id="ip-expires_at" name="expires_at" type="date"></p>
+		<?php $presets = apply_filters( 'indexpilot_shortlink_utm_presets', array() ); ?>
+		<?php if ( is_array( $presets ) && array() !== $presets ) : ?>
+<p><label for="ip-preset"><?php esc_html_e( 'Шаблон UTM', 'indexpilot' ); ?></label>
+<select id="ip-preset"><option value=""><?php esc_html_e( 'Выберите шаблон', 'indexpilot' ); ?></option>
+			<?php foreach ( $presets as $preset ) : ?>
+<option data-source="<?php echo esc_attr( $preset['source'] ); ?>" data-medium="<?php echo esc_attr( $preset['medium'] ); ?>" data-campaign="<?php echo esc_attr( $preset['campaign'] ); ?>"><?php echo esc_html( $preset['label'] ); ?></option>
+	<?php endforeach; ?></select></p>
+<script>document.getElementById('ip-preset').addEventListener('change',function(){const p=this.selectedOptions[0];for(const k of ['source','medium','campaign']){document.getElementById('ip-utm_'+k).value=p.dataset[k]||'';}});</script>
+		<?php endif; ?>
+		<?php submit_button( __( 'Создать ссылку', 'indexpilot' ) ); ?>
+			</form>
+
+			<h2>
+				<?php
+				/* translators: %d: число ссылок. */
+				echo esc_html( sprintf( __( 'Ссылки (%d)', 'indexpilot' ), $total ) );
+				?>
+			</h2>
+			<form method="get">
+<input type="hidden" name="page" value="<?php echo esc_attr( self::SLUG ); ?>">
+<label for="ip-filter"><?php esc_html_e( 'Кампания', 'indexpilot' ); ?></label>
+<select id="ip-filter" name="campaign"><option value=""><?php esc_html_e( 'Все кампании', 'indexpilot' ); ?></option>
+		<?php foreach ( $this->store->campaigns() as $name ) : ?>
+<option value="<?php echo esc_attr( $name ); ?>" <?php selected( $campaign, $name ); ?>><?php echo esc_html( $name ); ?></option>
+		<?php endforeach; ?></select>
+		<?php submit_button( __( 'Фильтровать', 'indexpilot' ), 'secondary', '', false ); ?>
+</form>
+		<?php $this->details(); ?>
+		<?php if ( array() === $links ) : ?>
+				<p><?php esc_html_e( 'Своих коротких ссылок пока нет.', 'indexpilot' ); ?></p>
+					<?php else : ?>
+				<table class="widefat striped">
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'Короткий адрес', 'indexpilot' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Куда ведёт', 'indexpilot' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Код', 'indexpilot' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Переходов', 'indexpilot' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Последний переход', 'indexpilot' ); ?></th>
+							<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Действия', 'indexpilot' ); ?></span></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $links as $link ) : ?>
+							<?php $url = $this->router->url( (string) $link['slug'] ); ?>
+							<tr>
+								<td>
+									<a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener"><code><?php echo esc_html( $url ); ?></code></a>
+									<button type="button" class="button-link" data-indexpilot-copy="<?php echo esc_attr( $url ); ?>"><?php esc_html_e( 'скопировать', 'indexpilot' ); ?></button>
+								</td>
+								<td><?php echo esc_html( (string) $link['target'] ); ?>
+<p><?php echo esc_html( (string) ( $link['campaign'] ?? '' ) ); ?></p>
+							<?php if ( ! empty( $link['expires_at'] ) && $link['expires_at'] < gmdate( 'Y-m-d' ) ) : ?>
+<strong><?php esc_html_e( 'Срок действия истёк', 'indexpilot' ); ?></strong>
+							<?php endif; ?>
+<a href="
+							<?php
+							echo esc_url(
+								add_query_arg(
+									array(
+										'page' => self::SLUG,
+										'link' => $link['id'],
+									),
+									admin_url( 'admin.php' )
+								)
+							);
+							?>
+			"><?php esc_html_e( 'Подробнее / изменить адрес', 'indexpilot' ); ?></a></td>
+								<td><?php echo esc_html( (string) $link['code'] ); ?></td>
+								<td><?php echo esc_html( number_format_i18n( (int) $link['clicks'] ) ); ?></td>
+								<td><?php echo esc_html( '' !== (string) $link['last_click'] ? get_date_from_gmt( (string) $link['last_click'], 'd.m.Y H:i' ) : '—' ); ?></td>
+								<td>
+									<form method="post">
+										<?php wp_nonce_field( self::NONCE ); ?>
+										<input type="hidden" name="indexpilot_shortlink_action" value="delete">
+										<input type="hidden" name="link_id" value="<?php echo esc_attr( (string) $link['id'] ); ?>">
+										<button type="submit" class="button-link button-link-delete"><?php esc_html_e( 'Удалить', 'indexpilot' ); ?></button>
+									</form>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+						<?php if ( $total > self::PER_PAGE ) : ?>
+					<p class="description">
+							<?php
+							/* translators: %d: число показанных ссылок. */
+							echo esc_html( sprintf( __( 'Показаны последние %d ссылок.', 'indexpilot' ), self::PER_PAGE ) );
+							?>
+					</p>
+				<?php endif; ?>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Текст ошибки создания ссылки на языке интерфейса.
+	 *
+	 * @param string $error Текст ошибки от Service.
+	 */
+	private function error_text( string $error ): string {
+		$known = array(
+			'Неверная дата окончания.'           => __( 'Неверная дата окончания.', 'indexpilot' ),
+			'Название кампании слишком длинное.' => __( 'Название кампании слишком длинное.', 'indexpilot' ),
+			'Адрес должен быть полным и начинаться с http:// или https://.' => __( 'Адрес должен быть полным и начинаться с http:// или https://.', 'indexpilot' ),
+			'Код перенаправления должен быть 301, 302 или 307.' => __( 'Код перенаправления должен быть 301, 302 или 307.', 'indexpilot' ),
+			'Код ссылки: от 2 до 64 символов, латинские буквы, цифры, дефис и подчёркивание.' => __( 'Код ссылки: от 2 до 64 символов, латинские буквы, цифры, дефис и подчёркивание.', 'indexpilot' ),
+			'Этот код уже занят.'                => __( 'Этот код уже занят.', 'indexpilot' ),
+		);
+
+		return $known[ $error ] ?? $error;
+	}
+
+	/** Подробности ссылки и форма изменения цели. */
+	private function details(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- просмотр отчёта.
+		$id = isset( $_GET['link'] ) ? absint( wp_unslash( $_GET['link'] ) ) : 0;
+		if ( 0 === $id ) {
+			return; }
+		$link = $this->store->find_by_id( $id );
+		if ( null === $link ) {
+			return; }
+		?>
+<h2><?php echo esc_html( $link['slug'] ); ?></h2>
+<form method="post">
+		<?php wp_nonce_field( self::NONCE ); ?>
+<input type="hidden" name="indexpilot_shortlink_action" value="update">
+<input type="hidden" name="link_id" value="<?php echo esc_attr( (string) $id ); ?>">
+<label for="ip-edit-target"><?php esc_html_e( 'Новый адрес', 'indexpilot' ); ?></label>
+<input id="ip-edit-target" name="target" type="url" class="large-text" required value="<?php echo esc_attr( $link['target'] ); ?>">
+		<?php submit_button( __( 'Изменить адрес', 'indexpilot' ) ); ?>
+</form>
+		<?php
+		if ( null === $this->click_log ) {
+			echo '<p>' . esc_html__( 'Журнал переходов не подключён.', 'indexpilot' ) . '</p>';
+			return;
+		}
+		$daily = $this->click_log->by_day( $link['slug'], 30 );
+		$days  = array();
+		for ( $i = 29; $i >= 0; --$i ) {
+			$day          = gmdate( 'Y-m-d', strtotime( '-' . $i . ' days' ) );
+			$days[ $day ] = $daily[ $day ] ?? 0;
+		}
+		foreach ( array(
+			__( 'Переходы по дням за 30 дней (UTC)', 'indexpilot' ) => $days,
+			__( 'Источники за 30 дней', 'indexpilot' ) => $this->click_log->by_referrer( $link['slug'], 30 ),
+		) as $title => $rows ) {
+			echo '<h3>' . esc_html( $title ) . '</h3><table class="widefat striped"><thead><tr><th>' . esc_html__( 'День / источник', 'indexpilot' ) . '</th><th>' . esc_html__( 'Переходы', 'indexpilot' ) . '</th></tr></thead><tbody>';
+			foreach ( $rows as $label => $hits ) {
+				echo '<tr><td>' . esc_html( '' === $label ? __( 'Прямой переход', 'indexpilot' ) : (string) $label ) . '</td><td>' . esc_html( (string) $hits ) . '</td></tr>';
+			}
+			echo '</tbody></table>';
+		}
+	}
+}

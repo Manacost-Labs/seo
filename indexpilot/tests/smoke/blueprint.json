@@ -1,0 +1,16 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"landingPage": "/wp-admin/plugins.php",
+	"steps": [
+		{ "step": "runPHP", "code": "<?php @mkdir('/wordpress/wp-content/mu-plugins', 0777, true); file_put_contents('/wordpress/wp-content/mu-plugins/indexpilot-fixture.php', \"<?php require '/wordpress/wp-content/plugins/indexpilot/tests/smoke/fixture-types.php';\");" },
+		{ "step": "activatePlugin", "pluginPath": "indexpilot/indexpilot.php" },
+		{ "step": "runPHP", "code": "<?php require '/wordpress/wp-load.php'; require '/wordpress/wp-content/plugins/indexpilot/tests/smoke/smoke.php';" },
+		{ "step": "runPHP", "code": "<?php require '/wordpress/wp-load.php'; require '/wordpress/wp-content/plugins/indexpilot/tests/smoke/cli-prepare.php';" },
+		{ "step": "wp-cli", "command": "wp indexpilot analyze --all" },
+		{ "step": "wp-cli", "command": "wp indexpilot links scan --restart" },
+		{ "step": "wp-cli", "command": "wp indexpilot audit" },
+		{ "step": "wp-cli", "command": "wp indexpilot decks versions" },
+		{ "step": "wp-cli", "command": "wp indexpilot sitemap flush" },
+		{ "step": "runPHP", "code": "<?php require '/wordpress/wp-load.php'; require '/wordpress/wp-content/plugins/indexpilot/tests/smoke/cli-verify.php';" }
+	]
+}

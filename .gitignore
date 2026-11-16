@@ -1,0 +1,18 @@
+# Зависимости и сборка
+indexpilot/vendor/
+node_modules/
+dist/
+
+# Исходники конкурентов — только для чтения, в историю не входят
+reference/
+
+# Файлы, которые тестовый сайт пишет при каждом запуске
+indexpilot/tests/smoke/urls.json
+indexpilot/tests/smoke/game-urls.json
+indexpilot/tests/smoke/shortlinks.json
+indexpilot/tests/smoke/admin-result.json
+
+# Служебное
+*.log
+.DS_Store
+Thumbs.db
