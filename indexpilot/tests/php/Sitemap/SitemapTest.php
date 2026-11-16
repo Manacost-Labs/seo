@@ -205,4 +205,16 @@ final class SitemapTest extends TestCase {
 		self::assertNull( Router::parse( '/category/sitemap.xml', '/' ) );
 		self::assertNull( Router::parse( '/gajd/', '/' ) );
 	}
+
+	public function test_old_sitemap_addresses_lead_to_ours(): void {
+		foreach ( array( '/wp-sitemap.xml', '/wp-sitemap-posts-post-1.xml', '/wp-sitemap-taxonomies-category-1.xml', '/post-sitemap.xml', '/hs_deck-sitemap2.xml', '/category-sitemap.xml?x=1' ) as $old ) {
+			self::assertTrue( Router::legacy( $old, '/' ), $old );
+		}
+
+		self::assertTrue( Router::legacy( '/blog/wp-sitemap.xml', '/blog/' ) );
+
+		foreach ( array( '/sitemap.xml', '/sitemap-pt-post-1.xml', '/sitemap-news.xml', '/gajd/wp-sitemap.xml', '/wp-sitemap-index.xsl', '/sitemap.xml.gz' ) as $other ) {
+			self::assertFalse( Router::legacy( $other, '/' ), $other );
+		}
+	}
 }

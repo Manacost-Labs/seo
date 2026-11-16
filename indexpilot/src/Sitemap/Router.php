@@ -115,6 +115,27 @@ final class Router {
 	}
 
 	/**
+	 * Адрес карты другого плагина или штатной карты WordPress: /wp-sitemap.xml, /wp-sitemap-posts-post-1.xml,
+	 * /post-sitemap.xml, /hs_deck-sitemap2.xml.
+	 *
+	 * @param string $request_uri Адрес запроса с путём и параметрами.
+	 * @param string $home_path   Путь, по которому установлен сайт.
+	 */
+	public static function legacy( string $request_uri, string $home_path ): bool {
+		$path = (string) strtok( $request_uri, '?' );
+		$home = '/' . trim( $home_path, '/' );
+		$home = '/' === $home ? '/' : $home . '/';
+
+		if ( ! str_starts_with( $path, $home ) ) {
+			return false;
+		}
+
+		$file = substr( $path, strlen( $home ) );
+
+		return 1 === preg_match( '/^(?:wp-sitemap(?:-[a-z0-9_-]+)?|[a-z0-9_-]+-sitemap\d*)\.xml$/', $file );
+	}
+
+	/**
 	 * Адрес файла карты.
 	 *
 	 * @param string $kind Вид: pt или tax.
@@ -131,9 +152,23 @@ final class Router {
 	public function handle(): void {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- адрес только сравнивается с шаблоном имён файлов карты.
 		$uri     = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
-		$request = self::parse( $uri, (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH ) );
+		$home    = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		$request = self::parse( $uri, $home );
 
 		if ( null === $request ) {
+			// Старые адреса карт (штатная WordPress, AIOSEO) уже знают поисковики: ведём их на нашу карту, а не в 404.
+			// Только если наша карта есть: иначе штатный WordPress вернул бы /sitemap.xml на /wp-sitemap.xml — петля.
+			$index = array(
+				'kind' => 'index',
+				'name' => '',
+				'page' => 0,
+			);
+
+			if ( self::legacy( $uri, $home ) && null !== $this->render( $index ) ) {
+				wp_safe_redirect( home_url( '/' . self::INDEX ), 301, 'IndexPilot' );
+				exit;
+			}
+
 			return;
 		}
 

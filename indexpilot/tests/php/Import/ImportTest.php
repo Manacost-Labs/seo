@@ -100,7 +100,10 @@ final class ImportTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'Мета-отчёт', $fields[ MetaKeys::TITLE ] );
+		self::assertSame( 'Мета-отчёт %sep% %sitename%', $fields[ MetaKeys::TITLE ], 'Модуль выводил свой заголовок внутри формата «%title% %sep% %sitename%».' );
+		self::assertSame( '%sitename%: Мета-отчёт', SvlSeoImporter::title( 'Мета-отчёт', '%sitename%: %title%' ) );
+		self::assertSame( 'Мета-отчёт', SvlSeoImporter::title( 'Мета-отчёт', '%sitename%' ) );
+		self::assertSame( '', SvlSeoImporter::title( '', '%title% %sep% %sitename%' ) );
 		self::assertSame( 'Разбор меты.', $fields[ MetaKeys::DESCRIPTION ] );
 		self::assertSame( 'мета бг', $fields[ MetaKeys::FOCUS_KEYWORD ] );
 		self::assertSame( array( 'мета', 'поля сражений' ), $fields[ MetaKeys::KEYWORDS ] );

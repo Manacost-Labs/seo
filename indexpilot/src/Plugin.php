@@ -513,6 +513,8 @@ final class Plugin {
 			function (): void {
 				if ( ( new ConflictDetector() )->output_allowed() ) {
 					( new Head( $this->resolver(), $this->settings() ) )->register();
+					// Чужие description и og:* поверх наших — снимаются (плагины, которые не знают IndexPilot).
+					( new \IndexPilot\Compat\ForeignHead() )->register();
 					( new SchemaOutput( new PageData( $this->resolver(), $this->settings(), $this->trail(), new AuthorProfile(), $this->faq_block() ), new GraphBuilder() ) )->register();
 					( new Verification( $this->settings() ) )->register();
 					// Закрытые части записи: обёртка с классом и пометка платного содержимого в разметке.

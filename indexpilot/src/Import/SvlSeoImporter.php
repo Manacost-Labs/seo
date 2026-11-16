@@ -17,6 +17,11 @@ use IndexPilot\Meta\MetaKeys;
 final class SvlSeoImporter extends MetaSource {
 
 	/**
+	 * Формат заголовка модуля по умолчанию.
+	 */
+	public const DEFAULT_FORMAT = '%title% %sep% %sitename%';
+
+	/**
 	 * Идентификатор источника.
 	 */
 	public function id(): string {
@@ -66,7 +71,7 @@ final class SvlSeoImporter extends MetaSource {
 
 		return self::without_empty(
 			array(
-				MetaKeys::TITLE         => trim( (string) ( $row['_svl_seo_title'] ?? '' ) ),
+				MetaKeys::TITLE         => self::title( trim( (string) ( $row['_svl_seo_title'] ?? '' ) ), $this->format() ),
 				MetaKeys::DESCRIPTION   => trim( (string) ( $row['_svl_seo_desc'] ?? '' ) ),
 				MetaKeys::FOCUS_KEYWORD => $focus,
 				MetaKeys::KEYWORDS      => Importer::keywords( explode( ',', (string) ( $row['_svl_seo_keywords'] ?? '' ) ), $focus ),
@@ -76,5 +81,29 @@ final class SvlSeoImporter extends MetaSource {
 				MetaKeys::NOFOLLOW      => $robots['nofollow'] ? '1' : '',
 			)
 		);
+	}
+
+	/**
+	 * Формат заголовка модуля: свой заголовок записи модуль выводил внутри него («%title% — Название сайта»).
+	 */
+	private function format(): string {
+		$format = function_exists( 'get_option' ) ? (string) get_option( 'svl_seo_title_format', '' ) : '';
+
+		return '' !== trim( $format ) ? $format : self::DEFAULT_FORMAT;
+	}
+
+	/**
+	 * Свой заголовок записи в формате модуля — так, как его видели посетители. Переменные модуля
+	 * (%sep%, %sitename%, %tagline%) совпадают с переменными IndexPilot и остаются переменными.
+	 *
+	 * @param string $custom Заголовок, заданный в записи; пусто — заголовка нет.
+	 * @param string $format Формат модуля.
+	 */
+	public static function title( string $custom, string $format ): string {
+		if ( '' === $custom ) {
+			return '';
+		}
+
+		return str_contains( $format, '%title%' ) ? trim( str_replace( '%title%', $custom, $format ) ) : $custom;
 	}
 }
