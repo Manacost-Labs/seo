@@ -122,7 +122,7 @@ use IndexPilot\Variables\VariableRegistry;
  */
 final class Plugin {
 
-	public const VERSION = '1.0.0-rc3';
+	public const VERSION = '1.0.0-rc4';
 
 	/**
 	 * Единственный экземпляр.
@@ -515,6 +515,10 @@ final class Plugin {
 					( new Head( $this->resolver(), $this->settings() ) )->register();
 					// Чужие description и og:* поверх наших — снимаются (плагины, которые не знают IndexPilot).
 					( new \IndexPilot\Compat\ForeignHead() )->register();
+					// Чужие повторы canonical, description, prev/next и тегов соцсетей вне нашего блока убираются.
+					( new \IndexPilot\Compat\HeadDedupe() )->register();
+					// Страницы архетипов hs-manacost.ru: заголовок, описание и canonical собирает плагин колод.
+					( new \IndexPilot\Compat\DeckArchetypes() )->register();
 					( new SchemaOutput( new PageData( $this->resolver(), $this->settings(), $this->trail(), new AuthorProfile(), $this->faq_block() ), new GraphBuilder() ) )->register();
 					( new Verification( $this->settings() ) )->register();
 					// Закрытые части записи: обёртка с классом и пометка платного содержимого в разметке.

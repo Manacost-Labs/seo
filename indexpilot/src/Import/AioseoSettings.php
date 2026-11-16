@@ -102,6 +102,15 @@ final class AioseoSettings {
 			}
 		}
 
+		// Картинка соцсетей по умолчанию: AIOSEO хранит адрес, IndexPilot — номер вложения.
+		$default = (string) ( is_array( $options ) ? ( $options['social']['facebook']['general']['defaultImagePosts'] ?? '' ) : '' );
+		$image   = '' !== $default && empty( $current['general']['default_og_image_id'] ) ? attachment_url_to_postid( $default ) : 0;
+
+		if ( $image > 0 ) {
+			$merged['general']['default_og_image_id'] = $image;
+			$changed['general'][]                     = 'default_og_image_id';
+		}
+
 		if ( ! $dry_run && array() !== $changed ) {
 			update_option( 'indexpilot_settings', $merged );
 		}

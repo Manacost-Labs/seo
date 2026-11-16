@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       IndexPilot
  * Description:       SEO для Hearthstone-сайтов: мета-теги, предпросмотр сниппета, анализ текста, рубрики, колоды.
- * Version:           1.0.0-rc3
+ * Version:           1.0.0-rc4
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * License:           GPL-2.0-or-later
@@ -13,7 +13,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'INDEXPILOT_VERSION', '1.0.0-rc3' );
+define( 'INDEXPILOT_VERSION', '1.0.0-rc4' );
 define( 'INDEXPILOT_FILE', __FILE__ );
 define( 'INDEXPILOT_DIR', __DIR__ . '/' );
 
