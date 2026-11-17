@@ -43,9 +43,21 @@ final class Writer {
 	 */
 	public function fill( string $title, string $content ): array {
 		$client = $this->account->client();
-		$images = Draft::without_alt( Draft::images( $content ) );
-		$max    = (int) $this->settings->general( 'description_max' );
-		$text   = self::text( $content );
+		$images = array();
+		$urls   = array();
+
+		// Картинка, которую не удалось прочитать ни с диска, ни по адресу, модели не отдаётся и alt не получает.
+		foreach ( Draft::without_alt( Draft::images( $content ) ) as $image ) {
+			$url = $this->image_url( $image );
+
+			if ( '' !== $url ) {
+				$images[] = $image;
+				$urls[]   = $url;
+			}
+		}
+
+		$max  = (int) $this->settings->general( 'description_max' );
+		$text = self::text( $content );
 
 		if ( mb_strlen( $text ) < 300 ) {
 			throw new WriterException( 'В статье слишком мало текста: допишите её и нажмите кнопку снова.' );
@@ -60,7 +72,7 @@ final class Writer {
 				'description_min' => (int) $this->settings->general( 'description_min' ),
 				'description_max' => $max,
 			),
-			array_map( array( $this, 'image_url' ), $images )
+			$urls
 		);
 
 		$result = Draft::parse( $client->complete( $messages ), count( $images ), $max > 0 ? $max : 160 );
@@ -96,7 +108,8 @@ final class Writer {
 	}
 
 	/**
-	 * Адрес картинки для модели: уменьшенная копия с диска как data:-адрес или полный адрес на сайте.
+	 * Картинка для модели как data:-адрес: уменьшенная копия с диска, иначе — скачанная по адресу.
+	 * Пустая строка — картинку прочитать не удалось.
 	 *
 	 * @param array{src: string, id: int, alt: string} $image Картинка.
 	 */
@@ -121,6 +134,22 @@ final class Writer {
 			}
 		}
 
-		return str_starts_with( $image['src'], '//' ) ? 'https:' . $image['src'] : ( str_starts_with( $image['src'], '/' ) ? home_url( $image['src'] ) : $image['src'] );
+		$url      = str_starts_with( $image['src'], '//' ) ? 'https:' . $image['src'] : ( str_starts_with( $image['src'], '/' ) ? home_url( $image['src'] ) : $image['src'] );
+		$response = wp_safe_remote_get(
+			$url,
+			array(
+				'timeout'             => 15,
+				'limit_response_size' => self::MAX_FILE,
+			)
+		);
+		$type     = strtolower( trim( explode( ';', (string) wp_remote_retrieve_header( $response, 'content-type' ) )[0] ) );
+		$body     = (string) wp_remote_retrieve_body( $response );
+
+		if ( 200 !== (int) wp_remote_retrieve_response_code( $response ) || ! in_array( $type, array( 'image/png', 'image/jpeg', 'image/webp', 'image/gif' ), true ) || '' === $body || strlen( $body ) >= self::MAX_FILE ) {
+			return '';
+		}
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- картинка передаётся модели внутри запроса.
+		return 'data:' . $type . ';base64,' . base64_encode( $body );
 	}
 }

@@ -138,8 +138,7 @@ def split_messages(messages, workdir):
                     with open(path, 'wb') as handle:
                         handle.write(base64.b64decode(match.group(2)))
                     inputs.append({'type': 'localImage', 'path': path})
-                elif url.startswith('https://'):
-                    inputs.append({'type': 'image', 'url': url})
+                # Адреса картинок Codex не принимает: клиент передаёт картинки внутри запроса (data:).
     return '\n\n'.join(instructions), inputs
 
 
