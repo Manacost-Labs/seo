@@ -844,6 +844,7 @@
 						content: editorContent(),
 						slug: slug(),
 						description: value( 'indexpilot_description' ),
+						focus: value( 'indexpilot_focus_keyword' ),
 					},
 				} )
 				.then( function ( result ) {

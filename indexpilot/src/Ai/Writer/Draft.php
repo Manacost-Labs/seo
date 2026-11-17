@@ -123,7 +123,7 @@ final class Draft {
 			'Заполни SEO-поля статьи. Заголовок не меняй и не предлагай.',
 			'',
 			'Поля ответа:',
-			'"focus_keyword" — главный поисковый запрос статьи, 2–5 слов в нижнем регистре, так, как его набирают люди. Заголовок статьи не меняется, а поисковики ищут ключ именно в нём, поэтому запрос бери из заголовка: все его слова должны быть в заголовке (окончания могут отличаться). Из заголовка «Масса урона за один ход: гайд на Берн Мага от TrueBench» — «гайд на берн мага», а не «колода берн мага». Если в заголовке нет поисковой фразы, выбери самую близкую к нему.',
+			'"focus_keyword" — главный поисковый запрос статьи, 2–5 слов в нижнем регистре, так, как его набирают люди. Заголовок статьи не меняется, а поисковики ищут ключ именно в нём, поэтому запрос бери из заголовка: все его слова должны быть в заголовке (окончания могут отличаться). Из подходящих фраз выбирай ту, что есть в первом абзаце и чаще встречается в тексте: для статьи «Масса урона за один ход: гайд на Берн Мага от TrueBench», где «Берн Маг» стоит в первом абзаце и по всему тексту, — «берн маг», а «гайд на берн мага» — дополнительный; «колода берн мага» не подходит, этих слов нет в заголовке. Если редактор уже задал главный запрос и он есть в заголовке, оставь его. Если в заголовке нет поисковой фразы, выбери самую близкую к нему.',
 			sprintf( '"keywords" — до %d дополнительных запросов: другие формулировки, сленг игроков, английское название, если оно есть в статье. Без повтора главного запроса и без запятых внутри запроса.', MetaKeys::MAX_KEYWORDS ),
 			sprintf( '"description" — мета-описание для выдачи: строго %d–%d знаков с пробелами. Главный запрос дословно — в первой половине. Конкретика из статьи (что внутри, чем полезно), законченная мысль. Не повторяй заголовок дословно, без «В этой статье», без кавычек-ёлочек вокруг всего текста.', $min, $max ),
 			sprintf( '"answer" — краткий ответ на вопрос из заголовка: %d–%d слов, понятен без остальной статьи, начинается с сути, с конкретными названиями и числами из текста.', AnswerBlock::MIN_WORDS, AnswerBlock::MAX_WORDS ),
@@ -141,6 +141,10 @@ final class Draft {
 
 		if ( '' !== (string) ( $article['slug'] ?? '' ) ) {
 			$rules[] = 'Адрес страницы: ' . $article['slug'];
+		}
+
+		if ( '' !== (string) ( $article['focus'] ?? '' ) ) {
+			$rules[] = 'Текущий главный запрос: ' . $article['focus'];
 		}
 
 		if ( '' !== (string) ( $article['description'] ?? '' ) ) {
@@ -192,10 +196,12 @@ final class Draft {
 	 * @param int    $images          Сколько картинок отдано модели.
 	 * @param int    $description_max Предел длины описания.
 	 * @param string $title           Заголовок статьи: главный запрос должен в нём быть.
+	 * @param string $text            Текст статьи: главным становится запрос из первого абзаца, который чаще встречается.
+	 * @param string $current         Главный запрос, который уже задал редактор.
 	 * @return array{focus_keyword: string, keywords: list<string>, description: string, answer: string, faq: list<array{question: string, answer: string}>, alts: array<int, string>}
 	 * @throws WriterException Ответ не похож на JSON.
 	 */
-	public static function parse( string $raw, int $images, int $description_max, string $title = '' ): array {
+	public static function parse( string $raw, int $images, int $description_max, string $title = '', string $text = '', string $current = '' ): array {
 		$start = strpos( $raw, '{' );
 		$end   = strrpos( $raw, '}' );
 		$data  = false !== $start && false !== $end ? json_decode( substr( $raw, $start, $end - $start + 1 ), true ) : null;
@@ -215,14 +221,15 @@ final class Draft {
 			}
 		}
 
-		// Главного запроса нет в заголовке, а дополнительный там есть — они меняются местами.
-		if ( '' !== $title && '' !== $focus && ! self::in_title( $focus, $title ) ) {
-			foreach ( $keywords as $index => $keyword ) {
-				if ( self::in_title( $keyword, $title ) ) {
-					$keywords[ $index ] = $focus;
-					$focus              = $keyword;
-					break;
-				}
+		// Главный запрос — из заголовка: заголовок не меняется. Из запросов, которые в нём есть (предложенные моделью
+		// и заданный редактором), выбирается тот, что стоит в первом абзаце и чаще встречается в тексте.
+		if ( '' !== $title && '' !== $focus ) {
+			$best = self::best( array_merge( array( $focus ), $keywords, array( mb_strtolower( trim( $current ) ) ) ), $title, $text );
+
+			if ( '' !== $best && $best !== $focus ) {
+				$keywords = array_values( array_diff( $keywords, array( $best ) ) );
+				array_unshift( $keywords, $focus );
+				$focus = $best;
 			}
 		}
 
@@ -259,6 +266,54 @@ final class Draft {
 			'faq'           => array_slice( $faq, 0, self::FAQ_MAX ),
 			'alts'          => $alts,
 		);
+	}
+
+	/**
+	 * Лучший главный запрос из тех, что есть в заголовке: сначала — есть ли он в первом абзаце, затем — сколько раз
+	 * встречается в тексте. При равенстве остаётся порядок предложенных. Пусто — в заголовке нет ни одного.
+	 *
+	 * @param list<string> $candidates Запросы.
+	 * @param string       $title      Заголовок.
+	 * @param string       $text       Текст статьи.
+	 */
+	public static function best( array $candidates, string $title, string $text ): string {
+		$first = (string) preg_replace( '/\n.*/su', '', ltrim( $text ) );
+		$first = mb_strlen( $first ) < 80 ? mb_substr( $text, 0, 500 ) : $first;
+		$best  = '';
+		$score = array( -1, -1 );
+
+		foreach ( array_unique( array_filter( $candidates, 'strlen' ) ) as $candidate ) {
+			if ( ! self::in_title( $candidate, $title ) ) {
+				continue;
+			}
+
+			$current = array( self::in_title( $candidate, $first ) ? 1 : 0, self::count( $candidate, $text ) );
+
+			if ( $current > $score ) {
+				$best  = $candidate;
+				$score = $current;
+			}
+		}
+
+		return $best;
+	}
+
+	/**
+	 * Сколько раз запрос встречается в тексте подряд идущими словами, с точностью до окончаний.
+	 *
+	 * @param string $phrase Запрос.
+	 * @param string $text   Текст.
+	 */
+	public static function count( string $phrase, string $text ): int {
+		$words = (array) preg_split( '/[^\p{L}\p{N}]+/u', mb_strtolower( str_replace( 'ё', 'е', $phrase ) ), -1, PREG_SPLIT_NO_EMPTY );
+
+		if ( array() === $words ) {
+			return 0;
+		}
+
+		$parts = array_map( static fn( $word ): string => preg_quote( mb_substr( (string) $word, 0, max( 3, mb_strlen( (string) $word ) - 2 ) ), '/' ) . '[\p{L}\p{N}]*', $words );
+
+		return (int) preg_match_all( '/(?<![\p{L}\p{N}])' . implode( '[^\p{L}\p{N}]+', $parts ) . '/u', mb_strtolower( str_replace( 'ё', 'е', $text ) ) );
 	}
 
 	/**

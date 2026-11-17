@@ -120,6 +120,20 @@ final class WriterTest extends TestCase {
 		self::assertTrue( Draft::in_title( 'гайды на берн магов', 'Гайд на Берн Мага' ) );
 		self::assertFalse( Draft::in_title( 'колода мага', 'Гайд на Берн Мага' ) );
 		self::assertSame( 'колода берн мага', Draft::parse( $raw, 0, 160, 'Колода Берн мага' )['focus_keyword'] );
+
+		// Так было на статье про Берн мага: «Берн Маг» стоит в первом абзаце и по всему тексту, «гайд» — один раз в конце.
+		$text = "Берн Маг брал небольшой перерыв во время бана, когда мету заполонили Зоолоки и Яйцо Жрецы. Маг не переносит технические карты.\nИменно этому посвящен гайд. Берн Маг готовит урон, а Берн Мага сложно остановить.";
+		$raw  = (string) json_encode(
+			array(
+				'focus_keyword' => 'гайд на берн мага',
+				'keywords'      => array( 'колода берн мага' ),
+			)
+		);
+		$best = Draft::parse( $raw, 0, 160, 'Масса урона за один ход: гайд на Берн Мага от TrueBench', $text, 'Берн Маг' );
+		self::assertSame( 'берн маг', $best['focus_keyword'], 'Ключ редактора из заголовка и первого абзаца побеждает.' );
+		self::assertSame( array( 'гайд на берн мага', 'колода берн мага' ), $best['keywords'] );
+		self::assertSame( 3, Draft::count( 'берн маг', $text ) );
+		self::assertSame( 0, Draft::count( 'гайд на берн мага', $text ) );
 	}
 
 	public function test_broken_answer_is_an_error(): void {

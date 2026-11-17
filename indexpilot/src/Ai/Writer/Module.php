@@ -75,6 +75,10 @@ final class Module {
 						'type'    => 'string',
 						'default' => '',
 					),
+					'focus'       => array(
+						'type'    => 'string',
+						'default' => '',
+					),
 				),
 			)
 		);
@@ -108,7 +112,8 @@ final class Module {
 					$title,
 					$content,
 					'' !== (string) $request->get_param( 'slug' ) ? (string) $request->get_param( 'slug' ) : $post->post_name,
-					(string) $request->get_param( 'description' )
+					(string) $request->get_param( 'description' ),
+					(string) $request->get_param( 'focus' )
 				)
 			);
 		} catch ( WriterException $error ) {

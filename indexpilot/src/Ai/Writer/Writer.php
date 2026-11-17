@@ -40,10 +40,11 @@ final class Writer {
 	 * @param string $content     Текст из редактора.
 	 * @param string $slug        Адрес страницы (слаг).
 	 * @param string $description Текущее описание из формы.
+	 * @param string $focus       Текущий главный запрос из формы.
 	 * @return array<string, mixed>
 	 * @throws WriterException Нет ключа, сервис отказал или ответил не по формату.
 	 */
-	public function fill( string $title, string $content, string $slug = '', string $description = '' ): array {
+	public function fill( string $title, string $content, string $slug = '', string $description = '', string $focus = '' ): array {
 		$client = $this->account->client();
 		$images = array();
 		$urls   = array();
@@ -75,11 +76,12 @@ final class Writer {
 				'description_max' => $max,
 				'slug'            => urldecode( $slug ),
 				'description'     => wp_strip_all_tags( $description ),
+				'focus'           => wp_strip_all_tags( $focus ),
 			),
 			$urls
 		);
 
-		$result = Draft::parse( $client->complete( $messages ), count( $images ), $max > 0 ? $max : 160, wp_strip_all_tags( $title ) );
+		$result = Draft::parse( $client->complete( $messages ), count( $images ), $max > 0 ? $max : 160, wp_strip_all_tags( $title ), $text, wp_strip_all_tags( $focus ) );
 
 		$alts = array();
 
