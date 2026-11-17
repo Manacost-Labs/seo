@@ -249,15 +249,40 @@ final class Commands {
 	 * <action>
 	 * : Действие: versions — пересчитать, какая версия каждой колоды актуальная.
 	 *
+	 * [--dry-run]
+	 * : Показать изменения canonical без сохранения карты версий.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp indexpilot decks versions
 	 *
 	 * @param list<string> $args Позиционные аргументы.
+	 * @param array        $assoc_args Именованные аргументы.
 	 */
-	public function decks( $args ): void {
+	public function decks( $args, $assoc_args = array() ): void {
 		if ( 'versions' !== ( $args[0] ?? '' ) ) {
 			\WP_CLI::error( 'Неизвестное действие. Доступно: versions.' );
+		}
+
+		if ( isset( $assoc_args['dry-run'] ) ) {
+			$saved = get_option( \IndexPilot\Game\Module::VERSIONS_OPTION, array() );
+			$map   = $this->plugin->game()->calculate_versions();
+			$count = 0;
+			if ( $this->plugin->settings()->general( 'deck_version_canonical' ) ) {
+				foreach ( $map as $id => $target ) {
+					$old = (int) ( $saved['map'][ $id ] ?? $id );
+					if ( $old !== $target && '' === trim( (string) get_post_meta( $id, \IndexPilot\Meta\MetaKeys::CANONICAL, true ) ) ) {
+						$from = 'publish' === get_post_status( $old ) ? get_permalink( $old ) : get_permalink( $id );
+						$to   = get_permalink( $target );
+						if ( $from !== $to ) {
+							\WP_CLI::log( sprintf( '%s  %s → %s', get_permalink( $id ), $from, $to ) );
+							++$count;
+						}
+					}
+				}
+			}
+			\WP_CLI::success( sprintf( 'Проверено колод: %d. Изменений canonical: %d.', count( $map ), $count ) );
+			return;
 		}
 
 		$map     = $this->plugin->game()->rebuild_versions();

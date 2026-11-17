@@ -111,6 +111,8 @@ final class Module {
 
 		// Панель записи и список записей: подсказки ссылок на классы и архетипы, отметка «устарело после патча».
 		add_action( 'indexpilot_metabox_analysis', array( $this, 'mention_hints' ) );
+		add_action( 'indexpilot_metabox_analysis', array( $this, 'deck_code_notice' ) );
+		add_action( 'admin_init', array( $this, 'schedule_catalog_update' ) );
 		add_action( 'indexpilot_post_list_flags', array( $this, 'patch_flag' ) );
 
 		if ( is_admin() ) {
@@ -261,6 +263,48 @@ final class Module {
 		}
 
 		return $this->decks;
+	}
+
+	/**
+	 * Сверяет сохранённый код с заголовком в редакторе Koloda.
+	 *
+	 * @param \WP_Post $post Запись.
+	 */
+	public function deck_code_notice( $post ): void {
+		if ( ! $post instanceof \WP_Post || DeckVariables::POST_TYPE !== $post->post_type || SiteProfile::KOLODA !== $this->plugin->site_profile() ) {
+			return;
+		}
+
+		$deck   = $this->decks()->deck( (int) $post->ID );
+		$header = Deckstring::decode( $deck->code );
+		if ( '' === $deck->code ) {
+			$message = __( 'Код колоды пуст. Вставьте код из игры.', 'indexpilot' );
+		} elseif ( null === $header ) {
+			$message = __( 'Не удалось прочитать заголовок кода колоды. Проверьте, полностью ли он скопирован.', 'indexpilot' );
+		} elseif ( '' === $deck->hero_class ) {
+			/* translators: %d: ID героя из кода колоды. */
+			$message = sprintf( __( 'Героя с ID %d пока нет в справочнике классов.', 'indexpilot' ), $header['hero'] );
+		} else {
+			$lexicon = $this->plugin->lexicon();
+			$title   = $lexicon->classes( $deck->title );
+			if ( 1 !== count( $title ) || in_array( $title[0], Deckstring::class_slugs( $header['hero'] ), true ) ) {
+				return;
+			}
+			/* translators: 1: класс в заголовке, 2: классы героя из кода колоды. */
+			$message = sprintf( __( 'В названии указан %1$s, в коде колоды — %2$s. Проверьте название и код.', 'indexpilot' ), $lexicon->class_name( $title[0] ), $deck->hero_class );
+		}
+		echo '<p class="notice notice-warning inline">' . esc_html( $message ) . '</p>';
+	}
+
+	/** Пересчитывает старую карту в фоне после установки нового справочника. */
+	public function schedule_catalog_update(): void {
+		if ( SiteProfile::KOLODA !== $this->plugin->site_profile() || ! $this->active() ) {
+			return;
+		}
+		$saved = get_option( self::VERSIONS_OPTION );
+		if ( HeroCatalog::BUILD !== ( $saved['catalog'] ?? null ) && ! wp_next_scheduled( self::REBUILD_HOOK ) ) {
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, self::REBUILD_HOOK );
+		}
 	}
 
 	/**
@@ -457,13 +501,30 @@ final class Module {
 	 * @return array<int, int>
 	 */
 	public function rebuild_versions(): array {
-		global $wpdb;
-
-		$this->versions = array();
-
 		if ( ! $this->active() ) {
-			return $this->versions;
+			return array();
 		}
+
+		$this->versions = $this->calculate_versions();
+		update_option(
+			self::VERSIONS_OPTION,
+			array(
+				'built'   => time(),
+				'map'     => $this->versions,
+				'catalog' => HeroCatalog::BUILD,
+			),
+			false
+		);
+		return $this->versions;
+	}
+
+	/**
+	 * Вычисляет карту версий для предварительной проверки или сохранения.
+	 *
+	 * @return array<int, int> ID колоды => ID актуальной версии.
+	 */
+	public function calculate_versions(): array {
+		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- один столбец по индексу; результат сохраняется в опции.
 		$ids  = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish' ORDER BY ID ASC", DeckVariables::POST_TYPE ) ) );
@@ -488,18 +549,7 @@ final class Module {
 			}
 		}
 
-		$this->versions = DeckVersionRule::current( $rows );
-
-		update_option(
-			self::VERSIONS_OPTION,
-			array(
-				'built' => time(),
-				'map'   => $this->versions,
-			),
-			false
-		);
-
-		return $this->versions;
+		return DeckVersionRule::current( $rows );
 	}
 
 	/**

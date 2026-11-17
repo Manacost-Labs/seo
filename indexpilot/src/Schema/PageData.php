@@ -65,7 +65,10 @@ final class PageData {
 		$is_post = Context::POST === $context->type;
 		$post    = $is_post ? get_post( $context->object_id ) : null;
 
-		$image_id = $meta->og_image_id > 0 ? $meta->og_image_id : (int) $this->settings->general( 'default_og_image_id' );
+		$default_image = (int) $this->settings->general( 'default_og_image_id' );
+		$image         = $post instanceof \WP_Post
+			? SearchImages::primary( (int) $post->ID, $default_image )
+			: $this->image( $meta->og_image_id > 0 ? $meta->og_image_id : $default_image );
 
 		// Каноникал ведёт на другую страницу: узлы получают собственный адрес страницы, узла статьи нет.
 		$own     = $this->resolver->own_url( $context );
@@ -90,7 +93,7 @@ final class PageData {
 				'description' => $meta->description,
 				'published'   => $post instanceof \WP_Post ? (string) get_post_time( 'c', false, $post ) : '',
 				'modified'    => $post instanceof \WP_Post ? PostDates::modified( 'c', false, $post ) : '',
-				'image'       => $this->image( $image_id ),
+				'image'       => $image,
 			),
 			'breadcrumbs'  => $this->trail->for_context( $context ),
 			'article'      => $post instanceof \WP_Post && ! $foreign ? $this->article( $post ) : null,

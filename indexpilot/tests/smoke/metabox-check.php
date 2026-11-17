@@ -110,8 +110,11 @@ $search_image = static function ( int $width, int $height ): int {
 };
 $square = $search_image( 1200, 1200 );
 $wide   = $search_image( 1176, 597 );
+$social = $search_image( 1200, 630 );
+set_post_thumbnail( $post->ID, $wide );
 $_POST  = array(
 	'indexpilot_post_nonce' => wp_create_nonce( 'indexpilot_save_post' ),
+	'indexpilot_og_image_id' => (string) $social,
 	'indexpilot_image_1x1'  => (string) $square,
 	'indexpilot_image_4x3'  => (string) $wide,
 	'indexpilot_image_16x9' => '',
@@ -123,14 +126,24 @@ $metabox->render( get_post( $post->ID ) );
 $images_html = (string) ob_get_clean();
 $page_html   = (string) wp_remote_retrieve_body( wp_remote_get( (string) get_permalink( $post->ID ), array( 'timeout' => 90, 'sslverify' => false ) ) );
 $article_img = array();
+$primary_node = array();
 if ( preg_match( '#<script type="application/ld\+json" class="indexpilot-schema">(.*?)</script>#s', $page_html, $found ) ) {
 	foreach ( (array) ( json_decode( $found[1], true )['@graph'] ?? array() ) as $node ) {
+		if ( str_ends_with( $node['@id'] ?? '', '#primaryimage' ) ) {
+			$primary_node = $node;
+		}
 		if ( isset( $node['headline'] ) ) {
 			$article_img = isset( $node['image']['@id'] ) ? array( $node['image'] ) : (array) ( $node['image'] ?? array() );
 		}
 	}
 }
 $article_img = array_column( $article_img, '@id' );
+$primary = static fn( int $default = 0 ) => \IndexPilot\Meta\SearchImages::primary( (int) $post->ID, $default );
+$social_result = $primary();
+delete_post_meta( $post->ID, MetaKeys::OG_IMAGE_ID );
+$thumbnail_result = $primary();
+delete_post_thumbnail( $post->ID );
+$default_result = $primary( $square );
 
 header( 'Content-Type: application/json; charset=utf-8' );
 echo wp_json_encode(
@@ -161,6 +174,9 @@ echo wp_json_encode(
 		'ai_alt_keeps_own'               => 'Свой alt' === get_post_meta( $own_alt, '_wp_attachment_image_alt', true ),
 		'ai_alt_only_attachments'        => '' === get_post_meta( $post->ID, '_wp_attachment_image_alt', true ),
 		'search_images_tab'              => str_contains( $images_html, 'data-tab="images"' ) && str_contains( $images_html, 'name="indexpilot_image_1x1" value="' . $square . '"' ),
+		'social_image_in_preview_and_article' => str_contains( $images_html, 'Картинка для соцсетей этой записи' ) && str_contains( $images_html, 'Основная картинка 1200 × 630' ) && in_array( $primary_node['@id'] ?? '', $article_img, true ) && $social_result['url'] === ( $primary_node['url'] ?? '' ) && 1200 === $primary_node['width'] && 630 === $primary_node['height'],
+		'apm_cover_dimensions'           => 'thumbnail' === $thumbnail_result['source'] && 1176 === $thumbnail_result['width'] && 597 === $thumbnail_result['height'],
+		'no_thumbnail_fallback'          => 'default' === $default_result['source'] && null === $primary(),
 		'search_images_saved'            => $square === (int) get_post_meta( $post->ID, MetaKeys::IMAGE_1X1, true ) && '' === (string) get_post_meta( $post->ID, MetaKeys::IMAGE_16X9, true ),
 		'search_image_wrong_shape_warns' => str_contains( $images_html, 'Пропорция не та' ),
 		'search_images_in_schema'        => in_array( get_permalink( $post->ID ) . '#image-1x1', $article_img, true ) && in_array( get_permalink( $post->ID ) . '#image-4x3', $article_img, true ),

@@ -26,23 +26,6 @@ final class Deckstring {
 	);
 
 	/**
-	 * Герои по умолчанию: номер карты героя => класс. Облики героев имеют другие номера и здесь не перечислены.
-	 */
-	private const HEROES = array(
-		7     => 'Воин',
-		31    => 'Охотник',
-		274   => 'Друид',
-		637   => 'Маг',
-		671   => 'Паладин',
-		813   => 'Жрец',
-		893   => 'Чернокнижник',
-		930   => 'Разбойник',
-		1066  => 'Шаман',
-		56550 => 'Охотник на демонов',
-		78065 => 'Рыцарь смерти',
-	);
-
-	/**
 	 * Режим и герой из кода колоды; null — строка не является кодом колоды.
 	 *
 	 * @param string $code Код колоды.
@@ -85,7 +68,17 @@ final class Deckstring {
 	 * @param int $hero Номер карты героя.
 	 */
 	public static function class_name( int $hero ): string {
-		return self::HEROES[ $hero ] ?? '';
+		return implode( ' / ', array_map( static fn( string $slug ): string => Lexicon::NAMES[ $slug ], self::class_slugs( $hero ) ) );
+	}
+
+	/**
+	 * Все классы героя, включая героев Потасовки.
+	 *
+	 * @param int $hero Номер карты героя.
+	 * @return list<string>
+	 */
+	public static function class_slugs( int $hero ): array {
+		return isset( HeroCatalog::CLASSES[ $hero ] ) ? explode( ' ', HeroCatalog::CLASSES[ $hero ] ) : array();
 	}
 
 	/**

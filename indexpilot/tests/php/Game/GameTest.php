@@ -66,6 +66,13 @@ final class GameTest extends TestCase {
 		self::assertSame( 'Вольный', Deckstring::mode_name( 1 ) );
 	}
 
+	public function test_skins_and_brawl_heroes_keep_their_playable_classes(): void {
+		self::assertSame( Deckstring::class_name( 893 ), Deckstring::class_name( 47817 ) );
+		self::assertSame( 'Жрец / Чернокнижник', Deckstring::class_name( 134896 ) );
+		self::assertSame( array( 'death-knight', 'warrior', 'demon-hunter' ), Deckstring::class_slugs( 134893 ) );
+		self::assertSame( array(), Deckstring::class_slugs( 999999 ) );
+	}
+
 	public function test_manacost_deck_is_built_from_meta_and_taxonomies(): void {
 		$deck = $this->manacost()->deck( 1 );
 

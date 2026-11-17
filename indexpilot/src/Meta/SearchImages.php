@@ -10,8 +10,7 @@ declare( strict_types=1 );
 namespace IndexPilot\Meta;
 
 /**
- * Google показывает картинку статьи в выдаче квадратом и сам обрезает широкую обложку. В разметке статьи можно дать
- * ему готовые версии 1:1, 4:3 и 16:9 — тогда он берёт подходящую, а не вырезает середину обложки.
+ * Основная картинка записи и подготовленные редактором варианты для разметки статьи.
  */
 final class SearchImages {
 
@@ -37,6 +36,33 @@ final class SearchImages {
 	public const OK    = '';
 	public const SMALL = 'small';
 	public const SHAPE = 'shape';
+
+	/**
+	 * Основное изображение записи для разметки и предпросмотра.
+	 *
+	 * @param int $post_id ID записи.
+	 * @param int $default_id Изображение из настроек сайта.
+	 * @return array{source: string, url: string, width: int, height: int}|null
+	 */
+	public static function primary( int $post_id, int $default_id ): ?array {
+		$candidates = array(
+			'social'    => (int) get_post_meta( $post_id, MetaKeys::OG_IMAGE_ID, true ),
+			'thumbnail' => (int) get_post_thumbnail_id( $post_id ),
+			'default'   => $default_id,
+		);
+		foreach ( $candidates as $source => $id ) {
+			$image = $id > 0 ? wp_get_attachment_image_src( $id, 'full' ) : false;
+			if ( is_array( $image ) ) {
+				return array(
+					'source' => $source,
+					'url'    => (string) $image[0],
+					'width'  => (int) $image[1],
+					'height' => (int) $image[2],
+				);
+			}
+		}
+		return null;
+	}
 
 	/**
 	 * Что не так с картинкой для этой пропорции: SHAPE — другая пропорция, SMALL — уже 1200 пикселей, OK — подходит.

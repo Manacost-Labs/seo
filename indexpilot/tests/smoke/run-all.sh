@@ -62,6 +62,7 @@ json_check restfield-check.php
 json_check indexnow-check.php
 json_check authors-check.php
 json_check game-check.php
+json_check koloda-check.php
 json_check search-check.php
 json_check shortlinks-check.php
 json_check health-check.php

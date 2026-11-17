@@ -169,8 +169,8 @@ final class ClassicMetabox {
 					'useImage'      => __( 'Использовать', 'indexpilot' ),
 					/* translators: %s: пропорция, например «1:1». */
 					'chooseSearch'  => __( 'Картинка %s для поиска', 'indexpilot' ),
-					'imageSmall'    => __( 'Меньше 1200 пикселей в ширину: Google может её не взять. Загрузите крупнее.', 'indexpilot' ),
-					'imageShape'    => __( 'Пропорция не та: Google обрежет картинку сам. Подготовьте картинку нужной формы.', 'indexpilot' ),
+					'imageSmall'    => __( 'Для крупного предпросмотра рекомендуется ширина от 1200 пикселей.', 'indexpilot' ),
+					'imageShape'    => __( 'Пропорция не та. Подготовьте изображение указанной формы.', 'indexpilot' ),
 					'chars'         => __( 'символов', 'indexpilot' ),
 					'words'         => __( 'слов', 'indexpilot' ),
 					/* translators: 1: сколько вопросов добавлено, 2: сколько можно. */
@@ -516,18 +516,22 @@ final class ClassicMetabox {
 	 * @param \WP_Post $post Запись.
 	 */
 	private function render_images_pane( \WP_Post $post ): void {
-		$cover = (int) get_post_thumbnail_id( $post );
-		$full  = $cover > 0 ? wp_get_attachment_image_src( $cover, 'full' ) : false;
-		$names = array(
+		$primary = SearchImages::primary( (int) $post->ID, (int) $this->settings->general( 'default_og_image_id' ) );
+		$sources = array(
+			'social'    => __( 'Картинка для соцсетей этой записи', 'indexpilot' ),
+			'thumbnail' => __( 'Миниатюра записи', 'indexpilot' ),
+			'default'   => __( 'Картинка по умолчанию из настроек сайта', 'indexpilot' ),
+		);
+		$names   = array(
 			'1x1'  => __( 'Квадрат 1:1', 'indexpilot' ),
 			'4x3'  => __( 'Картинка 4:3', 'indexpilot' ),
 			'16x9' => __( 'Широкая 16:9', 'indexpilot' ),
 		);
-		$warns = array(
-			SearchImages::SMALL => __( 'Меньше 1200 пикселей в ширину: Google может её не взять. Загрузите крупнее.', 'indexpilot' ),
-			SearchImages::SHAPE => __( 'Пропорция не та: Google обрежет картинку сам. Подготовьте картинку нужной формы.', 'indexpilot' ),
+		$warns   = array(
+			SearchImages::SMALL => __( 'Для крупного предпросмотра рекомендуется ширина от 1200 пикселей.', 'indexpilot' ),
+			SearchImages::SHAPE => __( 'Пропорция не та. Подготовьте изображение указанной формы.', 'indexpilot' ),
 		);
-		$sizes = array(
+		$sizes   = array(
 			'1x1'  => '1200 × 1200',
 			'4x3'  => '1200 × 900',
 			'16x9' => '1200 × 675',
@@ -535,23 +539,25 @@ final class ClassicMetabox {
 		?>
 		<div class="indexpilot-pane" role="tabpanel" data-pane="images" hidden>
 			<p class="description">
-				<?php esc_html_e( 'Google показывает картинку статьи в выдаче квадратом. Широкую обложку он обрезает сам — остаётся середина. Загрузите версии картинки нужной формы: Google возьмёт подходящую из разметки статьи. Пустое поле — возьмётся обложка.', 'indexpilot' ); ?>
+				<?php esc_html_e( 'Когда для страницы выводится разметка статьи, IndexPilot передаёт основную картинку и сохранённые варианты. Google сам выбирает изображение и кадрирование для выдачи.', 'indexpilot' ); ?>
 			</p>
 
-			<?php if ( is_array( $full ) ) : ?>
+			<?php if ( null !== $primary ) : ?>
 				<div class="indexpilot-search-cover">
-					<div class="indexpilot-search-thumb" style="aspect-ratio: 1 / 1;"><img src="<?php echo esc_url( (string) wp_get_attachment_image_url( $cover, 'large' ) ); ?>" alt=""></div>
+					<div class="indexpilot-search-thumb" style="aspect-ratio: 1 / 1;"><img src="<?php echo esc_url( $primary['url'] ); ?>" alt=""></div>
 					<p>
-						<strong><?php esc_html_e( 'Так Google может обрезать обложку сейчас', 'indexpilot' ); ?></strong><br>
+						<strong><?php echo esc_html( $sources[ $primary['source'] ] ); ?></strong><br>
 						<?php
-						/* translators: 1: ширина, 2: высота обложки. */
-						echo esc_html( sprintf( __( 'Обложка %1$d × %2$d.', 'indexpilot' ), (int) $full[1], (int) $full[2] ) );
-						if ( (int) $full[1] < SearchImages::MIN_WIDTH ) {
+						/* translators: 1: ширина, 2: высота изображения. */
+						echo esc_html( sprintf( __( 'Основная картинка %1$d × %2$d.', 'indexpilot' ), $primary['width'], $primary['height'] ) );
+						if ( $primary['width'] < SearchImages::MIN_WIDTH ) {
 							echo ' <span class="indexpilot-search-warn">' . esc_html__( 'Меньше 1200 пикселей в ширину — для Google Discover нужна крупнее.', 'indexpilot' ) . '</span>';
 						}
 						?>
 					</p>
 				</div>
+			<?php else : ?>
+				<p><?php esc_html_e( 'Основная картинка не задана. Для статьи доступны только сохранённые ниже варианты.', 'indexpilot' ); ?></p>
 			<?php endif; ?>
 
 			<div class="indexpilot-search-slots">

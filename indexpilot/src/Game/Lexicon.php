@@ -11,7 +11,7 @@ use IndexPilot\Analysis\Language\RussianStemmer;
 /** Сопоставляет игровые названия и словоформы. */
 final class Lexicon implements GameLexicon {
 	/** @var array Названия классов. */
-	private const NAMES = array(
+	public const NAMES = array(
 		'death-knight' => 'Рыцарь смерти',
 		'demon-hunter' => 'Охотник на демонов',
 		'druid'        => 'Друид',
