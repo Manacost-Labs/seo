@@ -118,8 +118,8 @@ final class Cache {
 	 * Следующее чтение создаст новое поколение. Пачка правок не перестраивает XML на каждой записи.
 	 */
 	public function flush(): void {
-		if ( false !== get_option( self::GENERATION ) ) {
-			delete_option( self::GENERATION );
-		}
+		// Другой процесс мог создать поколение после того, как импорт закешировал отсутствие опции.
+		// delete_option сверяет наличие с базой; готовые XML при этом не перестраиваются.
+		delete_option( self::GENERATION );
 	}
 }

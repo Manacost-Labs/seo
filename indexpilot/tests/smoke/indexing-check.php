@@ -54,6 +54,16 @@ $cache->remember( 'race-check', static function () use ( $cache ) {
 } );
 $checks['concurrent_flush'] = 'current' === $cache->remember( 'race-check', static fn() => 'current' );
 
+// Долгий импорт считает опцию отсутствующей в своей памяти, а соседний запрос уже заполнил карту.
+$generation_key = 'indexpilot_sitemap_generation';
+wp_cache_delete( $generation_key, 'options' );
+$absent = (array) wp_cache_get( 'notoptions', 'options' );
+$absent[ $generation_key ] = true;
+wp_cache_set( 'notoptions', $absent, 'options' );
+$cache->flush();
+wp_cache_delete( 'notoptions', 'options' );
+$checks['bulk_worker_flush'] = 'after_import' === $cache->remember( 'race-check', static fn() => 'after_import' );
+
 $head = new Head( $plugin->resolver(), $plugin->settings() );
 $robots = $head->robots( array( 'noindex' => true, 'nofollow' => true, 'nosnippet' => true, 'noarchive' => true ) );
 $checks['foreign_restrictions'] = isset( $robots['noindex'], $robots['nofollow'], $robots['nosnippet'], $robots['noarchive'] )
