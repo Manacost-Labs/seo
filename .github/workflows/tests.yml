@@ -51,3 +51,48 @@ jobs:
         with:
           node-version: '22'
       - run: node --test indexpilot/tests/js/*.test.js
+
+  wordpress:
+    name: WordPress — ${{ matrix.install }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        install: [fresh, upgrade-rc11]
+    defaults:
+      run:
+        working-directory: indexpilot
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, curl, zip
+      - name: Проверить релизный пакет в WordPress Playground
+        env:
+          INSTALL: ${{ matrix.install }}
+        run: |
+          php ../tools/build.php
+          mkdir -p "$RUNNER_TEMP/site"
+          if [[ "$INSTALL" == fresh ]]; then
+            unzip -q ../dist/indexpilot-*.zip -d "$RUNNER_TEMP/site"
+            cp -R tests "$RUNNER_TEMP/site/indexpilot/"
+          else
+            bash tests/smoke/upgrade-run.sh prepare "$RUNNER_TEMP/site" 8bcda33dac8cf41ac29d611d192bdc022dd6d3aa
+          fi
+          npx --yes @wp-playground/cli@3.1.64 server --port=9401 --blueprint=tests/smoke/site-blueprint.json --mount-dir "$RUNNER_TEMP/site/indexpilot" /wordpress/wp-content/plugins/indexpilot > "$RUNNER_TEMP/playground.log" 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          if [[ "$INSTALL" == fresh ]]; then
+            (cd "$RUNNER_TEMP/site/indexpilot" && bash tests/smoke/run-all.sh)
+          else
+            bash tests/smoke/upgrade-run.sh check "$RUNNER_TEMP/site"
+          fi
+      - if: failure()
+        run: tail -100 "$RUNNER_TEMP/playground.log" || true

@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Sitemap;
 
+use IndexPilot\Game\Module;
+use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Settings\Settings;
 
 /**
@@ -16,8 +18,8 @@ use IndexPilot\Settings\Settings;
  */
 final class Cache {
 
-	private const PREFIX = 'indexpilot_sm_';
-	private const KEYS   = 'indexpilot_sitemap_keys';
+	private const PREFIX     = 'indexpilot_sm_';
+	private const GENERATION = 'indexpilot_sitemap_generation';
 
 	/**
 	 * Обычный срок хранения файла: шесть часов.
@@ -35,6 +37,27 @@ final class Cache {
 		add_action( 'delete_term', array( $this, 'flush' ) );
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'flush' ) );
 		add_action( 'add_option_' . Settings::OPTION, array( $this, 'flush' ) );
+		foreach ( array( 'post', 'term' ) as $object ) {
+			foreach ( array( 'added', 'updated', 'deleted' ) as $event ) {
+				add_action( "{$event}_{$object}_meta", array( $this, 'on_meta' ), 10, 3 );
+			}
+		}
+		foreach ( array( 'add', 'update', 'delete' ) as $event ) {
+			add_action( $event . '_option_' . Module::VERSIONS_OPTION, array( $this, 'flush' ) );
+		}
+	}
+
+	/**
+	 * Прямой импорт меты не вызывает сохранение записи или термина.
+	 *
+	 * @param mixed  $meta_ids ID строки или список удалённых строк.
+	 * @param int    $object_id ID записи или термина.
+	 * @param string $key Ключ метаданных.
+	 */
+	public function on_meta( $meta_ids, $object_id, $key ): void {
+		if ( MetaKeys::NOINDEX === $key || MetaKeys::CANONICAL === $key ) {
+			$this->flush();
+		}
 	}
 
 	/**
@@ -45,11 +68,18 @@ final class Cache {
 	 * @param callable|null $ttl   Срок хранения в секундах, если он короче обычного: вызывается после сборки файла.
 	 */
 	public function remember( string $name, callable $build, ?callable $ttl = null ): ?string {
+		$generation = get_option( self::GENERATION );
+		if ( false === $generation ) {
+			$generation = wp_generate_uuid4();
+			if ( ! add_option( self::GENERATION, $generation, '', false ) ) {
+				$generation = get_option( self::GENERATION );
+			}
+		}
 		$key    = self::PREFIX . md5( $name );
 		$cached = get_transient( $key );
 
-		if ( is_string( $cached ) && '' !== $cached ) {
-			return $cached;
+		if ( is_string( $generation ) && isset( $cached['generation'], $cached['xml'] ) && $cached['generation'] === $generation ) {
+			return $cached['xml'];
 		}
 
 		$xml = $build();
@@ -58,14 +88,15 @@ final class Cache {
 			return null;
 		}
 
-		set_transient( $key, $xml, null === $ttl ? self::TTL : max( 60, min( self::TTL, (int) $ttl() ) ) );
-
-		$keys = get_option( self::KEYS, array() );
-		$keys = is_array( $keys ) ? $keys : array();
-
-		if ( ! in_array( $key, $keys, true ) ) {
-			$keys[] = $key;
-			update_option( self::KEYS, $keys, false );
+		if ( is_string( $generation ) ) {
+			set_transient(
+				$key,
+				array(
+					'generation' => $generation,
+					'xml'        => $xml,
+				),
+				null === $ttl ? self::TTL : max( 60, min( self::TTL, (int) $ttl() ) )
+			);
 		}
 
 		return $xml;
@@ -84,19 +115,11 @@ final class Cache {
 	}
 
 	/**
-	 * Удаляет все сохранённые файлы карты.
+	 * Следующее чтение создаст новое поколение. Пачка правок не перестраивает XML на каждой записи.
 	 */
 	public function flush(): void {
-		$keys = get_option( self::KEYS, array() );
-
-		if ( ! is_array( $keys ) || array() === $keys ) {
-			return;
+		if ( false !== get_option( self::GENERATION ) ) {
+			delete_option( self::GENERATION );
 		}
-
-		foreach ( $keys as $key ) {
-			delete_transient( (string) $key );
-		}
-
-		delete_option( self::KEYS );
 	}
 }

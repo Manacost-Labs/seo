@@ -16,6 +16,7 @@ use IndexPilot\Resolver\ContextFactory;
 use IndexPilot\Resolver\MetaResolver;
 use IndexPilot\Resolver\PostDates;
 use IndexPilot\Resolver\ResolvedMeta;
+use IndexPilot\Robots\Directives;
 use IndexPilot\Settings\Settings;
 
 /**
@@ -88,25 +89,8 @@ final class Head {
 		}
 
 		// Страница встраивания (/…/embed/) — служебная копия записи: штатный запрет WordPress остаётся в силе.
-		if ( is_embed() ) {
-			unset( $robots['index'] );
-
-			return array_merge(
-				(array) $robots,
-				array(
-					'noindex' => true,
-					'follow'  => true,
-				)
-			);
-		}
-
-		$directives = array();
-		foreach ( $this->meta()->robots as $directive ) {
-			$parts                   = explode( ':', $directive, 2 );
-			$directives[ $parts[0] ] = $parts[1] ?? true;
-		}
-
-		return $directives;
+		$directives = is_embed() ? array( 'noindex', 'follow' ) : $this->meta()->robots;
+		return Directives::merge( (array) $robots, $directives );
 	}
 
 	/**
@@ -219,7 +203,7 @@ final class Head {
 		$context = $this->context();
 		$links   = array();
 
-		if ( Context::POST === $context->type ) {
+		if ( Context::POST === $context->type && ! is_home() ) {
 			$post = get_post( $context->object_id );
 
 			if ( ! $post instanceof \WP_Post || post_password_required( $post ) ) {

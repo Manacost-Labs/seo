@@ -8,6 +8,7 @@
  */
 
 require '/wordpress/wp-load.php';
+require_once ABSPATH . 'wp-admin/includes/template.php';
 
 use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Promo\Blocks;

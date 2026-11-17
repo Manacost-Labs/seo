@@ -30,6 +30,7 @@ delete_option( 'indexpilot_import_state' );
 delete_option( 'indexpilot_redirect_targets' );
 delete_option( 'indexpilot_redirected_posts' );
 delete_option( 'indexpilot_sitemap_keys' );
+delete_option( 'indexpilot_sitemap_generation' );
 delete_option( 'indexpilot_links_scan' );
 delete_option( 'indexpilot_link_index' );
 delete_option( 'indexpilot_audit_state' );

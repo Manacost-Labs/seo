@@ -5,7 +5,9 @@
 
 set -u
 
-export PHPRC="${PHPRC:-D:/SEO-plugin/tools}"
+if [[ -z "${PHPRC:-}" && -d D:/SEO-plugin/tools ]]; then
+	export PHPRC=D:/SEO-plugin/tools
+fi
 SITE="${SITE:-http://127.0.0.1:9401}"
 BASE="$SITE/wp-content/plugins/indexpilot/tests/smoke"
 FAILED=0
@@ -44,6 +46,7 @@ json_check() {
 
 json_check rest-check.php
 json_check metabox-check.php
+json_check indexing-check.php
 json_check sanitize-check.php
 json_check breadcrumbs-check.php
 json_check admin-check.php

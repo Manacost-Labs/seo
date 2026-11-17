@@ -36,7 +36,7 @@ function indexpilot_upgrade_schemas(): array {
 	return array(
 		'indexpilot_db_version'            => array( '1', $wpdb->prefix . 'indexpilot_links', '' ),
 		'indexpilot_audit_db_version'      => array( '2', $wpdb->prefix . 'indexpilot_audit', 'fingerprint' ),
-		'indexpilot_shortlinks_db_version' => array( '2', $wpdb->prefix . 'indexpilot_shortlinks', 'expires_at' ),
+		'indexpilot_shortlinks_db_version' => array( '3', $wpdb->prefix . 'indexpilot_shortlinks', 'author' ),
 		'indexpilot_promo_db'              => array( '1', $wpdb->prefix . 'indexpilot_promo_clicks', '' ),
 	);
 }
