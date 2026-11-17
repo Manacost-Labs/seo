@@ -875,3 +875,16 @@
 		flex: 0 0 auto;
 	}
 }
+
+/* ИИ-помощник: кнопка и состояние над вкладками. */
+.indexpilot-ai-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	margin: 0 0 12px;
+}
+
+.indexpilot-ai-bar .indexpilot-status:empty {
+	display: none;
+}

@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace IndexPilot\Admin;
 
+use IndexPilot\Ai\Writer\Account;
 use IndexPilot\Analysis\PaperExtras;
 use IndexPilot\Frontend\AnswerBlock;
 use IndexPilot\Frontend\FactBlocks;
@@ -142,6 +143,7 @@ final class ClassicMetabox {
 				'objectType'     => 'post',
 				'objectId'       => (int) $post->ID,
 				'path'           => '/indexpilot/v1/analyze',
+				'aiPath'         => '/indexpilot/v1/ai-fill',
 				'siteName'       => get_bloginfo( 'name' ),
 				'siteIcon'       => (string) get_site_icon_url( 32 ),
 				'homeUrl'        => home_url( '/' ),
@@ -174,6 +176,22 @@ final class ClassicMetabox {
 					/* translators: %s: имена переменных через запятую, например %sitedesc%. */
 					'unknown'       => __( 'Неизвестная переменная: %s. На сайт она не выводится — исправьте имя или уберите её.', 'indexpilot' ),
 					'readability'   => __( 'Удобство чтения и готовность к цитированию. На оценку SEO эта группа не влияет.', 'indexpilot' ),
+					'aiWorking'     => __( 'ИИ читает статью и картинки — обычно 20–60 секунд…', 'indexpilot' ),
+					/* translators: %s: список заполненных полей. */
+					'aiDone'        => __( 'Готово: %s. Проверьте и сохраните запись.', 'indexpilot' ),
+					'aiNothing'     => __( 'Все поля уже заполнены — ничего не изменено.', 'indexpilot' ),
+					'aiReplace'     => __( 'Часть полей уже заполнена. Заменить их предложениями ИИ? «Отмена» — заполнить только пустые поля.', 'indexpilot' ),
+					'aiFailed'      => __( 'ИИ-помощник не ответил. Повторите через минуту.', 'indexpilot' ),
+					'aiNoEditor'    => __( 'alt картинок не вписан: текст статьи открыт не в классическом редакторе.', 'indexpilot' ),
+					'aiFields'      => array(
+						'description' => __( 'описание', 'indexpilot' ),
+						'focus'       => __( 'основной ключ', 'indexpilot' ),
+						'keywords'    => __( 'доп. ключи', 'indexpilot' ),
+						'answer'      => __( 'краткий ответ', 'indexpilot' ),
+						'faq'         => __( 'вопросы и ответы', 'indexpilot' ),
+						/* translators: %d: число картинок. */
+						'alts'        => __( 'alt у картинок: %d', 'indexpilot' ),
+					),
 				),
 			)
 		);
@@ -214,6 +232,7 @@ final class ClassicMetabox {
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD );
 		?>
 		<div id="indexpilot-panel" class="indexpilot-panel">
+			<?php $this->render_ai_bar(); ?>
 			<div class="indexpilot-tabs" role="tablist">
 				<button type="button" class="indexpilot-tab is-active" role="tab" aria-selected="true" data-tab="snippet"><?php esc_html_e( 'Вид в поиске', 'indexpilot' ); ?></button>
 				<button type="button" class="indexpilot-tab" role="tab" aria-selected="false" data-tab="content"><?php esc_html_e( 'Содержание', 'indexpilot' ); ?></button>
@@ -443,6 +462,41 @@ final class ClassicMetabox {
 		update_post_meta( (int) $post_id, MetaKeys::FAQ, wp_slash( FaqBlock::from_form( $faq ) ) );
 
 		( new PostSwitch() )->save( (int) $post_id, ! empty( $_POST[ PostSwitch::FIELD ] ) );
+
+		// Alt, который ИИ-помощник написал картинкам статьи: попадает и в медиатеку, если там alt пустой.
+		$alts = isset( $_POST['indexpilot_ai_alts'] ) ? json_decode( sanitize_text_field( wp_unslash( $_POST['indexpilot_ai_alts'] ) ), true ) : null;
+
+		foreach ( is_array( $alts ) ? $alts : array() as $id => $alt ) {
+			$id = (int) $id;
+
+			if ( $id > 0 && is_string( $alt ) && '' !== trim( $alt ) && 'attachment' === get_post_type( $id ) && current_user_can( 'edit_post', $id ) && '' === trim( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ) ) {
+				update_post_meta( $id, '_wp_attachment_image_alt', sanitize_text_field( $alt ) );
+			}
+		}
+	}
+
+	/**
+	 * Кнопка ИИ-помощника над вкладками панели. Без ключа — ссылка на подключение для администратора.
+	 */
+	private function render_ai_bar(): void {
+		$ready = ( new Account() )->has_key();
+
+		if ( ! $ready && ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		?>
+		<div class="indexpilot-ai-bar" data-indexpilot-ai>
+			<?php if ( $ready ) : ?>
+				<button type="button" class="button button-secondary" data-indexpilot-ai-fill><?php esc_html_e( 'Заполнить с ИИ', 'indexpilot' ); ?></button>
+				<span class="indexpilot-status" data-indexpilot-ai-status aria-live="polite"></span>
+				<input type="hidden" name="indexpilot_ai_alts" value="" data-indexpilot-ai-alts>
+				<?php HelpTip::render( __( 'нажмите, когда статья дописана. ИИ впишет описание для поиска, ключевые слова, краткий ответ, вопросы и ответы и alt картинок без описания. Заголовок остаётся заголовком статьи.', 'indexpilot' ), __( 'проверьте предложенное и сохраните запись как обычно. Уже заполненные поля меняются только с вашего согласия.', 'indexpilot' ) ); ?>
+			<?php else : ?>
+				<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=' . AiWriterPage::SLUG ) ); ?>"><?php esc_html_e( 'Подключить ИИ-помощника', 'indexpilot' ); ?></a>
+				<span class="description"><?php esc_html_e( 'заполняет SEO-поля и alt картинок по тексту статьи', 'indexpilot' ); ?></span>
+			<?php endif; ?>
+		</div>
+		<?php
 	}
 
 	/**

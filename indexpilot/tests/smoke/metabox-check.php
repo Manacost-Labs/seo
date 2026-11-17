@@ -77,6 +77,29 @@ $site_title   = $plugin->resolver()->resolve( new IndexPilot\Resolver\Context( I
 
 update_post_meta( $post->ID, MetaKeys::TITLE, $kept_title );
 
+// ИИ-помощник: без ключа — ссылка на подключение, с ключом — кнопка; alt от ИИ попадает в медиатеку только вместо пустого.
+delete_option( IndexPilot\Ai\Writer\Account::OPTION );
+$ai_route   = rest_do_request( new WP_REST_Request( 'POST', '/indexpilot/v1/ai-fill' ) );
+$ai_request = new WP_REST_Request( 'POST', '/indexpilot/v1/ai-fill' );
+$ai_request->set_body_params( array( 'post_id' => $post->ID ) );
+$ai_without_key = rest_do_request( $ai_request );
+( new IndexPilot\Ai\Writer\Account() )->save( 'chatgpt', '', 'smoke-token-0123456789abcdef' );
+ob_start();
+$metabox->render( get_post( $post->ID ) );
+$ai_html     = (string) ob_get_clean();
+$ai_autoload = $wpdb->get_var( $wpdb->prepare( "SELECT autoload FROM {$wpdb->options} WHERE option_name = %s", IndexPilot\Ai\Writer\Account::OPTION ) );
+delete_option( IndexPilot\Ai\Writer\Account::OPTION );
+
+$empty_alt = wp_insert_attachment( array( 'post_title' => 'a', 'post_mime_type' => 'image/png', 'post_status' => 'inherit' ) );
+$own_alt   = wp_insert_attachment( array( 'post_title' => 'b', 'post_mime_type' => 'image/png', 'post_status' => 'inherit' ) );
+update_post_meta( $own_alt, '_wp_attachment_image_alt', 'Свой alt' );
+$_POST = array(
+	'indexpilot_post_nonce' => wp_create_nonce( 'indexpilot_save_post' ),
+	'indexpilot_ai_alts'    => wp_json_encode( array( $empty_alt => 'Колода Берн мага', $own_alt => 'Чужой', $post->ID => 'Не картинка' ), JSON_UNESCAPED_UNICODE ),
+);
+wp_update_post( array( 'ID' => $post->ID ) );
+$_POST = array();
+
 header( 'Content-Type: application/json; charset=utf-8' );
 echo wp_json_encode(
 	array(
@@ -97,6 +120,14 @@ echo wp_json_encode(
 		'unknown_variable_is_named'      => str_contains( $unknown_html, 'Неизвестная переменная: %sitedesc%.' ) && 1 === preg_match( '#data-indexpilot-unknown role="alert" >#', $unknown_html ),
 		'unknown_variable_in_preview'    => 1 === preg_match( '#data-indexpilot-serp-title>[^<]*%sitedesc%#', $unknown_html ),
 		'unknown_variable_not_on_site'   => 'Гайд на мага — Manacost' === $site_title,
+		'ai_connect_link_without_key'    => str_contains( $html, 'page=indexpilot-ai-writer' ) && ! str_contains( $html, 'data-indexpilot-ai-fill' ),
+		'ai_button_with_key'             => str_contains( $ai_html, 'data-indexpilot-ai-fill' ) && str_contains( $ai_html, 'name="indexpilot_ai_alts"' ),
+		'ai_key_not_autoloaded'          => in_array( $ai_autoload, array( 'no', 'off' ), true ),
+		'ai_route_needs_post'            => 400 === $ai_route->get_status(),
+		'ai_without_key_explains'        => 400 === $ai_without_key->get_status() && str_contains( (string) ( $ai_without_key->get_data()['message'] ?? '' ), 'не подключён' ),
+		'ai_alt_fills_empty'             => 'Колода Берн мага' === get_post_meta( $empty_alt, '_wp_attachment_image_alt', true ),
+		'ai_alt_keeps_own'               => 'Свой alt' === get_post_meta( $own_alt, '_wp_attachment_image_alt', true ),
+		'ai_alt_only_attachments'        => '' === get_post_meta( $post->ID, '_wp_attachment_image_alt', true ),
 	),
 	JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
 );

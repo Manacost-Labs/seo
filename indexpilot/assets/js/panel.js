@@ -702,6 +702,193 @@
 		syncPrimary();
 	}
 
+	/* ---------- ИИ-помощник: SEO-поля и alt картинок по тексту статьи ---------- */
+
+	var aiButton = $( '[data-indexpilot-ai-fill]' );
+
+	/**
+	 * Вписывает значение в поле панели. Заполненное поле меняется, только если редактор согласился.
+	 *
+	 * @param {string}  id      Поле.
+	 * @param {string}  text    Значение.
+	 * @param {boolean} replace Заменять ли заполненное.
+	 * @return {boolean} Изменилось ли поле.
+	 */
+	function aiSet( id, text, replace ) {
+		var element = field( id );
+
+		if ( ! element || ! text || element.value === text || ( element.value.trim() !== '' && ! replace ) ) {
+			return false;
+		}
+
+		element.value = text;
+		element.dispatchEvent( new Event( 'input', { bubbles: true } ) );
+
+		return true;
+	}
+
+	function aiFaqRows() {
+		return faq ? Array.prototype.slice.call( faq.querySelectorAll( '[data-indexpilot-faq-rows] [data-indexpilot-faq-row]' ) ) : [];
+	}
+
+	function aiFaqFilled() {
+		return aiFaqRows().some( function ( row ) {
+			return row.querySelector( 'input' ).value.trim() !== '' || row.querySelector( 'textarea' ).value.trim() !== '';
+		} );
+	}
+
+	/**
+	 * Заменяет строки «вопрос — ответ».
+	 *
+	 * @param {Array} items Пары { question, answer }.
+	 * @return {boolean} Изменились ли строки.
+	 */
+	function aiSetFaq( items ) {
+		if ( ! faq || ! items || ! items.length ) {
+			return false;
+		}
+
+		var rows = faq.querySelector( '[data-indexpilot-faq-rows]' );
+		var template = faq.querySelector( '[data-indexpilot-faq-template]' );
+
+		aiFaqRows().forEach( function ( row ) {
+			row.remove();
+		} );
+
+		items.forEach( function ( item ) {
+			var row = template.content.firstElementChild.cloneNode( true );
+
+			row.querySelector( 'input' ).value = item.question;
+			row.querySelector( 'textarea' ).value = item.answer;
+			row.querySelector( '[data-indexpilot-faq-remove]' ).hidden = false;
+			rows.appendChild( row );
+		} );
+
+		if ( typeof updateFaq === 'function' ) {
+			updateFaq();
+		}
+
+		return true;
+	}
+
+	/**
+	 * Вписывает alt картинкам в тексте статьи: в визуальном редакторе и в режиме «Текст».
+	 *
+	 * @param {Array} alts Картинки { src, id, alt }.
+	 * @return {number} Сколько картинок получили alt; -1 — классического редактора на странице нет.
+	 */
+	function aiSetAlts( alts ) {
+		var bySrc = {};
+		var count = 0;
+		var editor = window.tinymce && window.tinymce.get( 'content' );
+		var area = field( 'content' );
+
+		alts.forEach( function ( item ) {
+			bySrc[ item.src ] = item.alt;
+		} );
+
+		if ( editor && ! editor.isHidden() ) {
+			editor.dom.select( 'img' ).forEach( function ( image ) {
+				var alt = bySrc[ image.getAttribute( 'src' ) ];
+
+				if ( alt && image.getAttribute( 'alt' ) !== alt ) {
+					editor.dom.setAttrib( image, 'alt', alt );
+					count++;
+				}
+			} );
+
+			if ( count ) {
+				editor.setDirty( true );
+				editor.fire( 'change' );
+			}
+
+			return count;
+		}
+
+		if ( ! area || area.tagName !== 'TEXTAREA' ) {
+			return -1;
+		}
+
+		area.value = area.value.replace( /<img\b[^>]*>/gi, function ( tag ) {
+			var match = tag.match( /\ssrc\s*=\s*(?:"([^"]*)"|'([^']*)')/i );
+			var alt = match ? bySrc[ ( match[ 1 ] !== undefined ? match[ 1 ] : match[ 2 ] ).replace( /&amp;/g, '&' ) ] : '';
+
+			if ( ! alt ) {
+				return tag;
+			}
+
+			count++;
+
+			return tag.replace( /\salt\s*=\s*(?:"[^"]*"|'[^']*')/i, '' ).replace( /^<img\b/i, '<img alt="' + alt.replace( /&/g, '&amp;' ).replace( /"/g, '&quot;' ).replace( /</g, '&lt;' ) + '"' );
+		} );
+
+		return count;
+	}
+
+	if ( aiButton ) {
+		var aiStatus = $( '[data-indexpilot-ai-status]' );
+		var aiAlts = $( '[data-indexpilot-ai-alts]' );
+		var aiNames = config.strings.aiFields;
+
+		aiButton.addEventListener( 'click', function () {
+			aiButton.disabled = true;
+			aiStatus.textContent = config.strings.aiWorking;
+
+			window.wp
+				.apiFetch( {
+					path: config.aiPath,
+					method: 'POST',
+					data: { post_id: config.objectId, title: value( 'title' ), content: editorContent() },
+				} )
+				.then( function ( result ) {
+					var filled = [ 'indexpilot_description', 'indexpilot_focus_keyword', 'indexpilot_keywords', 'indexpilot_answer' ].some( function ( id ) {
+						return field( id ) && field( id ).value.trim() !== '';
+					} ) || aiFaqFilled();
+					var replace = filled && window.confirm( config.strings.aiReplace );
+					var done = [];
+
+					if ( aiSet( 'indexpilot_description', result.description, replace ) ) {
+						done.push( aiNames.description );
+					}
+					if ( aiSet( 'indexpilot_focus_keyword', result.focus_keyword, replace ) ) {
+						done.push( aiNames.focus );
+					}
+					if ( aiSet( 'indexpilot_keywords', ( result.keywords || [] ).join( ', ' ), replace ) ) {
+						done.push( aiNames.keywords );
+					}
+					if ( aiSet( 'indexpilot_answer', result.answer, replace ) ) {
+						done.push( aiNames.answer );
+					}
+					if ( ( replace || ! aiFaqFilled() ) && aiSetFaq( result.faq ) ) {
+						done.push( aiNames.faq );
+					}
+
+					var alts = result.alts || [];
+					var count = alts.length ? aiSetAlts( alts ) : 0;
+					var saved = {};
+
+					if ( count > 0 ) {
+						done.push( aiNames.alts.replace( '%d', count ) );
+						alts.forEach( function ( item ) {
+							if ( item.id > 0 ) {
+								saved[ item.id ] = item.alt;
+							}
+						} );
+						aiAlts.value = JSON.stringify( saved );
+					}
+
+					aiStatus.textContent = ( done.length ? config.strings.aiDone.replace( '%s', done.join( ', ' ) ) : config.strings.aiNothing ) + ( count < 0 ? ' ' + config.strings.aiNoEditor : '' );
+					schedule();
+				} )
+				.catch( function ( error ) {
+					aiStatus.textContent = error && error.message ? error.message : config.strings.aiFailed;
+				} )
+				.then( function () {
+					aiButton.disabled = false;
+				} );
+		} );
+	}
+
 	/* ---------- Запуск ---------- */
 
 	if ( config.siteIcon ) {

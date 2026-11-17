@@ -122,7 +122,7 @@ use IndexPilot\Variables\VariableRegistry;
  */
 final class Plugin {
 
-	public const VERSION = '1.0.0-rc9';
+	public const VERSION = '1.0.0-rc10';
 
 	/**
 	 * Единственный экземпляр.
@@ -317,6 +317,10 @@ final class Plugin {
 
 		// Данные поиска (Search Console, Вебмастер) и мост между сайтами: сеть — только по расписанию и по кнопке.
 		( new \IndexPilot\SearchData\Module( $this ) )->register();
+
+		// ИИ-помощник: модель вызывается только по кнопке в панели записи.
+		( new \IndexPilot\Ai\Writer\Module( $this->settings() ) )->register();
+
 		( new \IndexPilot\CrossSite\BridgeSync( $this ) )->register();
 
 		// Граф ссылок: таблица создаётся при первом запуске, ссылки записи пересчитываются при её сохранении.

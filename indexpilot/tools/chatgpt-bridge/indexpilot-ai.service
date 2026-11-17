@@ -1,0 +1,31 @@
+[Unit]
+Description=IndexPilot: мост к ChatGPT через Codex app-server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=indexpilot-ai
+Group=indexpilot-ai
+Environment=HOME=/var/lib/indexpilot-ai
+Environment=CODEX_HOME=/var/lib/indexpilot-ai/.codex
+Environment=IPX_LISTEN=127.0.0.1:8787
+Environment=IPX_TOKEN_FILE=/etc/indexpilot-ai/token
+ExecStart=/usr/bin/python3 /opt/indexpilot-ai/bridge.py
+Restart=on-failure
+RestartSec=5
+
+# Мост и Codex видят только свой каталог: сайты, домашние каталоги и настройки сервера им недоступны.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/indexpilot-ai
+InaccessiblePaths=-/var/www -/data -/srv -/root -/etc/nginx -/etc/mysql -/etc/php
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

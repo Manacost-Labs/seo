@@ -18,9 +18,10 @@ final class WpHttp implements Http {
 	/**
 	 * Конструктор.
 	 *
-	 * @param int $timeout Сколько ждать ответа, секунд.
+	 * @param int  $timeout Сколько ждать ответа, секунд.
+	 * @param bool $safe    Запрещать адреса локальной сети; false — только для своего сервиса на 127.0.0.1.
 	 */
-	public function __construct( private int $timeout = 20 ) {
+	public function __construct( private int $timeout = 20, private bool $safe = true ) {
 	}
 
 	public function request( string $method, string $url, array $headers, string $body ): array {
@@ -35,7 +36,7 @@ final class WpHttp implements Http {
 			$args['body'] = $body;
 		}
 
-		$response = wp_safe_remote_request( $url, $args );
+		$response = $this->safe ? wp_safe_remote_request( $url, $args ) : wp_remote_request( $url, $args );
 
 		if ( is_wp_error( $response ) ) {
 			return array(
