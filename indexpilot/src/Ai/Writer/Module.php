@@ -55,15 +55,23 @@ final class Module {
 				'callback'            => array( $this, 'fill' ),
 				'permission_callback' => static fn( \WP_REST_Request $request ): bool => current_user_can( 'edit_post', (int) $request->get_param( 'post_id' ) ),
 				'args'                => array(
-					'post_id' => array(
+					'post_id'     => array(
 						'type'     => 'integer',
 						'required' => true,
 					),
-					'title'   => array(
+					'title'       => array(
 						'type'    => 'string',
 						'default' => '',
 					),
-					'content' => array(
+					'content'     => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'slug'        => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'description' => array(
 						'type'    => 'string',
 						'default' => '',
 					),
@@ -96,7 +104,12 @@ final class Module {
 
 		try {
 			return new \WP_REST_Response(
-				( new Writer( new Account(), $this->settings ) )->fill( $title, $content )
+				( new Writer( new Account(), $this->settings ) )->fill(
+					$title,
+					$content,
+					'' !== (string) $request->get_param( 'slug' ) ? (string) $request->get_param( 'slug' ) : $post->post_name,
+					(string) $request->get_param( 'description' )
+				)
 			);
 		} catch ( WriterException $error ) {
 			return new \WP_Error( 'indexpilot_ai_failed', $error->getMessage(), array( 'status' => 400 ) );

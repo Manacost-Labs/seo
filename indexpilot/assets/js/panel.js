@@ -838,7 +838,13 @@
 				.apiFetch( {
 					path: config.aiPath,
 					method: 'POST',
-					data: { post_id: config.objectId, title: value( 'title' ), content: editorContent() },
+					data: {
+						post_id: config.objectId,
+						title: value( 'title' ),
+						content: editorContent(),
+						slug: slug(),
+						description: value( 'indexpilot_description' ),
+					},
 				} )
 				.then( function ( result ) {
 					var filled = [ 'indexpilot_description', 'indexpilot_focus_keyword', 'indexpilot_keywords', 'indexpilot_answer' ].some( function ( id ) {

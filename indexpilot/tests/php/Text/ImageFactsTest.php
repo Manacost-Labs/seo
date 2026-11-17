@@ -14,5 +14,7 @@ final class ImageFactsTest extends TestCase {
   self::assertContains(array('index'=>0,'src'=>$images[0]['src'],'issue'=>ImageFacts::NO_SIZE),$issues);
   self::assertSame(array(ImageFacts::NO_SIZE),array_column(array_values(array_filter($issues,static fn($v)=>2 === $v['index'])),'issue'));
   self::assertContains(array('index'=>4,'src'=>'','issue'=>ImageFacts::DUPLICATE_ALT),$issues);
+  $separator = ImageFacts::issues(ImageFacts::extract(str_repeat('<img src="/sep.png" alt="Разделитель" width="9" height="9">',3).'<img src="/other.png" alt="разделитель" width="9" height="9">'));
+  self::assertSame(array(3),array_column($separator,'index'),'Одна картинка три раза — не повтор; другая с тем же alt — повтор.');
  }
 }

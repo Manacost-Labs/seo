@@ -106,6 +106,22 @@ final class WriterTest extends TestCase {
 		self::assertSame( array( 0 => 'Колода Берн мага' ), $result['alts'] );
 	}
 
+	public function test_focus_keyword_comes_from_title(): void {
+		$raw    = (string) json_encode(
+			array(
+				'focus_keyword' => 'колода берн мага',
+				'keywords'      => array( 'берн маг hearthstone', 'Гайд на берн мага' ),
+			)
+		);
+		$result = Draft::parse( $raw, 0, 160, 'Масса урона за один ход: гайд на Берн Мага от TrueBench' );
+
+		self::assertSame( 'гайд на берн мага', $result['focus_keyword'], 'Ключа нет в заголовке, а дополнительный там есть — они меняются местами.' );
+		self::assertContains( 'колода берн мага', $result['keywords'] );
+		self::assertTrue( Draft::in_title( 'гайды на берн магов', 'Гайд на Берн Мага' ) );
+		self::assertFalse( Draft::in_title( 'колода мага', 'Гайд на Берн Мага' ) );
+		self::assertSame( 'колода берн мага', Draft::parse( $raw, 0, 160, 'Колода Берн мага' )['focus_keyword'] );
+	}
+
 	public function test_broken_answer_is_an_error(): void {
 		$this->expectException( WriterException::class );
 		Draft::parse( 'Извините, не могу.', 0, 160 );

@@ -36,12 +36,14 @@ final class Writer {
 	/**
 	 * Значения полей для статьи.
 	 *
-	 * @param string $title   Заголовок.
-	 * @param string $content Текст из редактора.
+	 * @param string $title       Заголовок.
+	 * @param string $content     Текст из редактора.
+	 * @param string $slug        Адрес страницы (слаг).
+	 * @param string $description Текущее описание из формы.
 	 * @return array<string, mixed>
 	 * @throws WriterException Нет ключа, сервис отказал или ответил не по формату.
 	 */
-	public function fill( string $title, string $content ): array {
+	public function fill( string $title, string $content, string $slug = '', string $description = '' ): array {
 		$client = $this->account->client();
 		$images = array();
 		$urls   = array();
@@ -71,11 +73,13 @@ final class Writer {
 				'text'            => $text,
 				'description_min' => (int) $this->settings->general( 'description_min' ),
 				'description_max' => $max,
+				'slug'            => urldecode( $slug ),
+				'description'     => wp_strip_all_tags( $description ),
 			),
 			$urls
 		);
 
-		$result = Draft::parse( $client->complete( $messages ), count( $images ), $max > 0 ? $max : 160 );
+		$result = Draft::parse( $client->complete( $messages ), count( $images ), $max > 0 ? $max : 160, wp_strip_all_tags( $title ) );
 
 		$alts = array();
 

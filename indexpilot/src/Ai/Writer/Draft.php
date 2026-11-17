@@ -104,8 +104,8 @@ final class Draft {
 	/**
 	 * Сообщения для модели.
 	 *
-	 * @param array{site: string, about: string, title: string, text: string, description_min: int, description_max: int} $article Статья и сайт.
-	 * @param list<string>                                                                                               $images  Картинки: адрес или data:-адрес, по порядку.
+	 * @param array<string, mixed> $article Статья и сайт: site, about, title, text, description_min, description_max; slug и description — адрес и текущее описание из формы.
+	 * @param list<string>         $images  Картинки: адрес или data:-адрес, по порядку.
 	 * @return list<array<string, mixed>>
 	 */
 	public static function messages( array $article, array $images ): array {
@@ -123,21 +123,29 @@ final class Draft {
 			'Заполни SEO-поля статьи. Заголовок не меняй и не предлагай.',
 			'',
 			'Поля ответа:',
-			'"focus_keyword" — главный поисковый запрос статьи, 2–5 слов в нижнем регистре, так, как его набирают люди (например «колода берн мага», «гайд на берн мага»).',
+			'"focus_keyword" — главный поисковый запрос статьи, 2–5 слов в нижнем регистре, так, как его набирают люди. Заголовок статьи не меняется, а поисковики ищут ключ именно в нём, поэтому запрос бери из заголовка: все его слова должны быть в заголовке (окончания могут отличаться). Из заголовка «Масса урона за один ход: гайд на Берн Мага от TrueBench» — «гайд на берн мага», а не «колода берн мага». Если в заголовке нет поисковой фразы, выбери самую близкую к нему.',
 			sprintf( '"keywords" — до %d дополнительных запросов: другие формулировки, сленг игроков, английское название, если оно есть в статье. Без повтора главного запроса и без запятых внутри запроса.', MetaKeys::MAX_KEYWORDS ),
-			sprintf( '"description" — мета-описание для выдачи: строго %d–%d знаков с пробелами. Главный запрос — в первой половине. Конкретика из статьи (что внутри, чем полезно), законченная мысль. Не повторяй заголовок дословно, без «В этой статье», без кавычек-ёлочек вокруг всего текста.', $min, $max ),
+			sprintf( '"description" — мета-описание для выдачи: строго %d–%d знаков с пробелами. Главный запрос дословно — в первой половине. Конкретика из статьи (что внутри, чем полезно), законченная мысль. Не повторяй заголовок дословно, без «В этой статье», без кавычек-ёлочек вокруг всего текста.', $min, $max ),
 			sprintf( '"answer" — краткий ответ на вопрос из заголовка: %d–%d слов, понятен без остальной статьи, начинается с сути, с конкретными названиями и числами из текста.', AnswerBlock::MIN_WORDS, AnswerBlock::MAX_WORDS ),
 			sprintf( '"faq" — %d–%d вопросов, которые игроки действительно задают по этой теме, с ответами в 1–3 предложения строго по тексту статьи. Вопросы не повторяют заголовок.', self::FAQ_MIN, self::FAQ_MAX ),
 		);
 
 		if ( array() !== $images ) {
-			$rules[] = sprintf( '"alts" — alt для каждой картинки ниже: что на ней изображено, по-русски, до %d знаков, с названием колоды, карты или героя, если их видно или они понятны из статьи. Без слов «картинка», «изображение», «скриншот». Формат: [{"image": номер, "alt": "текст"}].', self::ALT_MAX );
+			$rules[] = sprintf( '"alts" — alt для каждой картинки ниже: что на ней изображено, по-русски, до %d знаков, с названием колоды, карты или героя, если их видно или они понятны из статьи. Без слов «картинка», «изображение», «скриншот». В alt одной картинки, которая лучше всех подходит к теме (колода, обложка гайда), естественно используй главный запрос. Формат: [{"image": номер, "alt": "текст"}].', self::ALT_MAX );
 		}
 
 		$rules[] = '';
 		$rules[] = 'Формат ответа: {"focus_keyword": "", "keywords": [], "description": "", "answer": "", "faq": [{"question": "", "answer": ""}]' . ( array() !== $images ? ', "alts": []' : '' ) . '}';
 		$rules[] = '';
 		$rules[] = 'Заголовок статьи: ' . $article['title'];
+
+		if ( '' !== (string) ( $article['slug'] ?? '' ) ) {
+			$rules[] = 'Адрес страницы: ' . $article['slug'];
+		}
+
+		if ( '' !== (string) ( $article['description'] ?? '' ) ) {
+			$rules[] = 'Текущее описание (редактор может его оставить — тогда хорошо, если главный запрос есть и в нём): ' . $article['description'];
+		}
 		$rules[] = '';
 		$rules[] = 'Текст статьи:';
 		$rules[] = '"""';
@@ -183,10 +191,11 @@ final class Draft {
 	 * @param string $raw             Ответ модели.
 	 * @param int    $images          Сколько картинок отдано модели.
 	 * @param int    $description_max Предел длины описания.
+	 * @param string $title           Заголовок статьи: главный запрос должен в нём быть.
 	 * @return array{focus_keyword: string, keywords: list<string>, description: string, answer: string, faq: list<array{question: string, answer: string}>, alts: array<int, string>}
 	 * @throws WriterException Ответ не похож на JSON.
 	 */
-	public static function parse( string $raw, int $images, int $description_max ): array {
+	public static function parse( string $raw, int $images, int $description_max, string $title = '' ): array {
 		$start = strpos( $raw, '{' );
 		$end   = strrpos( $raw, '}' );
 		$data  = false !== $start && false !== $end ? json_decode( substr( $raw, $start, $end - $start + 1 ), true ) : null;
@@ -203,6 +212,17 @@ final class Draft {
 
 			if ( '' !== $keyword && $keyword !== $focus && ! in_array( $keyword, $keywords, true ) ) {
 				$keywords[] = $keyword;
+			}
+		}
+
+		// Главного запроса нет в заголовке, а дополнительный там есть — они меняются местами.
+		if ( '' !== $title && '' !== $focus && ! self::in_title( $focus, $title ) ) {
+			foreach ( $keywords as $index => $keyword ) {
+				if ( self::in_title( $keyword, $title ) ) {
+					$keywords[ $index ] = $focus;
+					$focus              = $keyword;
+					break;
+				}
 			}
 		}
 
@@ -239,6 +259,26 @@ final class Draft {
 			'faq'           => array_slice( $faq, 0, self::FAQ_MAX ),
 			'alts'          => $alts,
 		);
+	}
+
+	/**
+	 * Все слова запроса есть в заголовке, с точностью до окончания.
+	 *
+	 * @param string $phrase Запрос.
+	 * @param string $title  Заголовок.
+	 */
+	public static function in_title( string $phrase, string $title ): bool {
+		$stem  = static fn( string $word ): string => mb_substr( $word, 0, max( 3, mb_strlen( $word ) - 2 ) );
+		$title = mb_strtolower( str_replace( 'ё', 'е', $title ) );
+		$words = (array) preg_split( '/[^\p{L}\p{N}]+/u', mb_strtolower( str_replace( 'ё', 'е', $phrase ) ), -1, PREG_SPLIT_NO_EMPTY );
+
+		foreach ( $words as $word ) {
+			if ( mb_strlen( (string) $word ) > 2 && ! preg_match( '/(?<![\p{L}\p{N}])' . preg_quote( $stem( (string) $word ), '/' ) . '/u', $title ) ) {
+				return false;
+			}
+		}
+
+		return array() !== $words;
 	}
 
 	/**

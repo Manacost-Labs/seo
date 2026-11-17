@@ -58,9 +58,10 @@ final class ImageFacts {
 							$normalize = static fn( string $value ): string => preg_replace( '/[\s_-]+/u', ' ', mb_strtolower( $value, 'UTF-8' ) );
 					if ( in_array( $normalize( $alt ), array( $normalize( $img['filename'] ), $normalize( pathinfo( $img['filename'], PATHINFO_FILENAME ) ) ), true ) || preg_match( '/^(img|image|dsc|dscn|pxl|photo|screenshot|снимок экрана|скриншот|изображение)[\s_\-]*\d/iu', $alt ) ) {
 						$issues[] = self::ALT_IS_FILENAME; }
-					if ( isset( $seen[ $alt ] ) ) {
+					// Одна и та же картинка, поставленная несколько раз (разделитель), повтором не считается.
+					if ( isset( $seen[ $alt ] ) && ( '' === $img['src'] || $seen[ $alt ] !== $img['src'] ) ) {
 						$issues[] = self::DUPLICATE_ALT; }
-					$seen[ $alt ] = true;
+					$seen[ $alt ] = $seen[ $alt ] ?? $img['src'];
 					}
 			}
 			if ( 0 === $img['width'] || 0 === $img['height'] ) {
