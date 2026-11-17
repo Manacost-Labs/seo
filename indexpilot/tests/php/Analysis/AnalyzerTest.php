@@ -332,6 +332,11 @@ final class AnalyzerTest extends TestCase {
 		self::assertSame( 'good', $statuses['keyword_in_subheadings'] );
 		self::assertSame( 'bad', $statuses['keyword_in_slug'], 'В слаге нет ни слов ключа, ни их синонимов в каноническом виде.' );
 
+		// Статья про Берн мага начиналась с карточки автора: имя и роль — короткие абзацы, они не первый абзац текста.
+		$card = '[su_note]<div class="hs-v-author"><p class="hs-v-author-name">TrueBench</p><p class="hs-v-author-role">Стример, игрок</p></div>[/su_note]'
+			. '<p dir="ltr"><strong>Берн Маг</strong> брал небольшой перерыв во время бана, когда мету заполонили Зоолоки.</p>';
+		self::assertSame( 'good', $this->statuses( ( new Analyzer() )->analyze( new Paper( title: 'Гайд на Берн Мага', content: $card, keyword: 'берн маг' ) ) )['keyword_in_first_paragraph'] );
+
 		$other = $this->statuses( ( new Analyzer() )->analyze( new Paper( title: 'Дека приста', content: '<p>Дека приста.</p>', keyword: 'колода мага' ) ) );
 
 		self::assertSame( 'bad', $other['keyword_in_title'] );

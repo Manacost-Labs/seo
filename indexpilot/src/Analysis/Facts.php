@@ -17,6 +17,11 @@ use IndexPilot\Text\Cleaner;
 final class Facts {
 
 	/**
+	 * Сколько слов должно быть в абзаце, чтобы считать его первым абзацем статьи, а не подписью или именем.
+	 */
+	public const PARAGRAPH_MIN_WORDS = 6;
+
+	/**
 	 * Видимый текст записи вместе с подзаголовками.
 	 *
 	 * @var string
@@ -95,9 +100,14 @@ final class Facts {
 		$this->readability = Readability::measure( $html );
 
 		$this->first_paragraph = '';
-		if ( preg_match_all( '#<p\b[^>]*>(.*?)</p>#isu', $html, $paragraphs ) ) {
-			foreach ( $paragraphs[1] as $paragraph ) {
-				$plain = Cleaner::to_plain_text( $paragraph, false );
+		// Карточка автора, подпись к картинке и другие служебные строки в начале статьи — не первый абзац:
+		// у них класс author, caption, byline или meta, либо в них меньше шести слов («TrueBench», «Стример, игрок»).
+		if ( preg_match_all( '#<p\b([^>]*)>(.*?)</p>#isu', $html, $paragraphs, PREG_SET_ORDER ) ) {
+			foreach ( $paragraphs as $paragraph ) {
+				$plain = Cleaner::to_plain_text( $paragraph[2], false );
+				if ( 1 === preg_match( '#class\s*=\s*["\'][^"\']*(?:author|caption|byline|meta)#i', $paragraph[1] ) || count( $matcher->words( $plain ) ) < self::PARAGRAPH_MIN_WORDS ) {
+					continue;
+				}
 				if ( '' !== $plain ) {
 					$this->first_paragraph = $plain;
 					break;
