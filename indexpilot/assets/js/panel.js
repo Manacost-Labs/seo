@@ -497,6 +497,72 @@
 		} );
 	}
 
+	/* ---------- Картинка в поиске: версии 1:1, 4:3, 16:9 ---------- */
+
+	// Та же проверка, что SearchImages::problem() на сервере: пропорция с допуском 3 %, ширина от 1200.
+	function searchProblem( width, height, ratioW, ratioH ) {
+		if ( ! width || ! height ) {
+			return '';
+		}
+		if ( Math.abs( ( width / height ) / ( ratioW / ratioH ) - 1 ) > 0.03 ) {
+			return config.strings.imageShape;
+		}
+		return width < 1200 ? config.strings.imageSmall : '';
+	}
+
+	Array.prototype.forEach.call( root.querySelectorAll( '[data-indexpilot-search-slot]' ), function ( slot ) {
+		var idField = slot.querySelector( '[data-indexpilot-search-id]' );
+		var preview = slot.querySelector( '[data-indexpilot-search-preview]' );
+		var size = slot.querySelector( '[data-indexpilot-search-size]' );
+		var warn = slot.querySelector( '[data-indexpilot-search-warn]' );
+		var ratioW = Number( slot.getAttribute( 'data-ratio-w' ) );
+		var ratioH = Number( slot.getAttribute( 'data-ratio-h' ) );
+		var emptySize = idField.value ? '' : size.textContent;
+
+		function show( attachment ) {
+			preview.textContent = '';
+			warn.textContent = '';
+
+			if ( ! attachment ) {
+				idField.value = '';
+				size.textContent = emptySize;
+				return;
+			}
+
+			var image = document.createElement( 'img' );
+
+			image.src = attachment.sizes && attachment.sizes.large ? attachment.sizes.large.url : attachment.url;
+			image.alt = '';
+			preview.appendChild( image );
+			idField.value = attachment.id;
+			size.textContent = attachment.width + ' × ' + attachment.height;
+			warn.textContent = searchProblem( attachment.width, attachment.height, ratioW, ratioH );
+		}
+
+		slot.querySelector( '[data-indexpilot-search-pick]' ).addEventListener( 'click', function () {
+			if ( ! window.wp.media ) {
+				return;
+			}
+
+			var frame = window.wp.media( {
+				title: config.strings.chooseSearch.replace( '%s', ratioW + ':' + ratioH ),
+				button: { text: config.strings.useImage },
+				library: { type: 'image' },
+				multiple: false,
+			} );
+
+			frame.on( 'select', function () {
+				show( frame.state().get( 'selection' ).first().toJSON() );
+			} );
+
+			frame.open();
+		} );
+
+		slot.querySelector( '[data-indexpilot-search-clear]' ).addEventListener( 'click', function () {
+			show( null );
+		} );
+	} );
+
 	/* ---------- Вопросы и ответы: добавление и удаление строк ---------- */
 
 	var faq = $( '[data-indexpilot-faq]' );

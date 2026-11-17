@@ -16,6 +16,7 @@ use IndexPilot\Frontend\FactBlocks;
 use IndexPilot\Frontend\FaqBlock;
 use IndexPilot\Game\PostMaterial;
 use IndexPilot\Meta\MetaKeys;
+use IndexPilot\Meta\SearchImages;
 use IndexPilot\Plugin;
 use IndexPilot\Promo\PostSwitch;
 use IndexPilot\Resolver\Context;
@@ -52,6 +53,9 @@ final class ClassicMetabox {
 		'indexpilot_schema_type'      => MetaKeys::SCHEMA_TYPE,
 		'indexpilot_breadcrumb_title' => MetaKeys::BREADCRUMB_TITLE,
 		'indexpilot_primary_category' => MetaKeys::PRIMARY_CATEGORY,
+		'indexpilot_image_1x1'        => MetaKeys::IMAGE_1X1,
+		'indexpilot_image_4x3'        => MetaKeys::IMAGE_4X3,
+		'indexpilot_image_16x9'       => MetaKeys::IMAGE_16X9,
 	);
 
 	/**
@@ -163,6 +167,10 @@ final class ClassicMetabox {
 					'error'         => __( 'Не удалось обновить анализ. Проверьте соединение и повторите.', 'indexpilot' ),
 					'chooseImage'   => __( 'Выберите картинку для соцсетей', 'indexpilot' ),
 					'useImage'      => __( 'Использовать', 'indexpilot' ),
+					/* translators: %s: пропорция, например «1:1». */
+					'chooseSearch'  => __( 'Картинка %s для поиска', 'indexpilot' ),
+					'imageSmall'    => __( 'Меньше 1200 пикселей в ширину: Google может её не взять. Загрузите крупнее.', 'indexpilot' ),
+					'imageShape'    => __( 'Пропорция не та: Google обрежет картинку сам. Подготовьте картинку нужной формы.', 'indexpilot' ),
 					'chars'         => __( 'символов', 'indexpilot' ),
 					'words'         => __( 'слов', 'indexpilot' ),
 					/* translators: 1: сколько вопросов добавлено, 2: сколько можно. */
@@ -242,6 +250,7 @@ final class ClassicMetabox {
 				</button>
 				<button type="button" class="indexpilot-tab" role="tab" aria-selected="false" data-tab="queries"><?php esc_html_e( 'Запросы', 'indexpilot' ); ?></button>
 				<button type="button" class="indexpilot-tab" role="tab" aria-selected="false" data-tab="social"><?php esc_html_e( 'Соцсети', 'indexpilot' ); ?></button>
+				<button type="button" class="indexpilot-tab" role="tab" aria-selected="false" data-tab="images"><?php esc_html_e( 'Картинка в поиске', 'indexpilot' ); ?></button>
 				<button type="button" class="indexpilot-tab" role="tab" aria-selected="false" data-tab="advanced"><?php esc_html_e( 'Дополнительно', 'indexpilot' ); ?></button>
 			</div>
 
@@ -383,6 +392,8 @@ final class ClassicMetabox {
 				</p>
 			</div>
 
+			<?php $this->render_images_pane( $post ); ?>
+
 			<div class="indexpilot-pane" role="tabpanel" data-pane="advanced" hidden>
 				<?php $shortlink = 'publish' === $post->post_status ? (string) wp_get_shortlink( $post->ID ) : ''; ?>
 				<?php if ( '' !== $shortlink ) : ?>
@@ -495,6 +506,86 @@ final class ClassicMetabox {
 				<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=' . AiWriterPage::SLUG ) ); ?>"><?php esc_html_e( 'Подключить ИИ-помощника', 'indexpilot' ); ?></a>
 				<span class="description"><?php esc_html_e( 'заполняет SEO-поля и alt картинок по тексту статьи', 'indexpilot' ); ?></span>
 			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Вкладка «Картинка в поиске»: как Google обрежет обложку сейчас и версии 1:1, 4:3, 16:9 для разметки статьи.
+	 *
+	 * @param \WP_Post $post Запись.
+	 */
+	private function render_images_pane( \WP_Post $post ): void {
+		$cover = (int) get_post_thumbnail_id( $post );
+		$full  = $cover > 0 ? wp_get_attachment_image_src( $cover, 'full' ) : false;
+		$names = array(
+			'1x1'  => __( 'Квадрат 1:1', 'indexpilot' ),
+			'4x3'  => __( 'Картинка 4:3', 'indexpilot' ),
+			'16x9' => __( 'Широкая 16:9', 'indexpilot' ),
+		);
+		$warns = array(
+			SearchImages::SMALL => __( 'Меньше 1200 пикселей в ширину: Google может её не взять. Загрузите крупнее.', 'indexpilot' ),
+			SearchImages::SHAPE => __( 'Пропорция не та: Google обрежет картинку сам. Подготовьте картинку нужной формы.', 'indexpilot' ),
+		);
+		$sizes = array(
+			'1x1'  => '1200 × 1200',
+			'4x3'  => '1200 × 900',
+			'16x9' => '1200 × 675',
+		);
+		?>
+		<div class="indexpilot-pane" role="tabpanel" data-pane="images" hidden>
+			<p class="description">
+				<?php esc_html_e( 'Google показывает картинку статьи в выдаче квадратом. Широкую обложку он обрезает сам — остаётся середина. Загрузите версии картинки нужной формы: Google возьмёт подходящую из разметки статьи. Пустое поле — возьмётся обложка.', 'indexpilot' ); ?>
+			</p>
+
+			<?php if ( is_array( $full ) ) : ?>
+				<div class="indexpilot-search-cover">
+					<div class="indexpilot-search-thumb" style="aspect-ratio: 1 / 1;"><img src="<?php echo esc_url( (string) wp_get_attachment_image_url( $cover, 'large' ) ); ?>" alt=""></div>
+					<p>
+						<strong><?php esc_html_e( 'Так Google может обрезать обложку сейчас', 'indexpilot' ); ?></strong><br>
+						<?php
+						/* translators: 1: ширина, 2: высота обложки. */
+						echo esc_html( sprintf( __( 'Обложка %1$d × %2$d.', 'indexpilot' ), (int) $full[1], (int) $full[2] ) );
+						if ( (int) $full[1] < SearchImages::MIN_WIDTH ) {
+							echo ' <span class="indexpilot-search-warn">' . esc_html__( 'Меньше 1200 пикселей в ширину — для Google Discover нужна крупнее.', 'indexpilot' ) . '</span>';
+						}
+						?>
+					</p>
+				</div>
+			<?php endif; ?>
+
+			<div class="indexpilot-search-slots">
+				<?php
+				foreach ( SearchImages::RATIOS as $ratio => $spec ) :
+					$id    = (int) get_post_meta( $post->ID, $spec[2], true );
+					$image = $id > 0 ? wp_get_attachment_image_src( $id, 'full' ) : false;
+					$issue = is_array( $image ) ? SearchImages::problem( (int) $image[1], (int) $image[2], $ratio ) : '';
+					?>
+					<div class="indexpilot-search-slot" data-indexpilot-search-slot="<?php echo esc_attr( $ratio ); ?>" data-ratio-w="<?php echo esc_attr( (string) $spec[0] ); ?>" data-ratio-h="<?php echo esc_attr( (string) $spec[1] ); ?>">
+						<input type="hidden" name="indexpilot_image_<?php echo esc_attr( $ratio ); ?>" value="<?php echo esc_attr( is_array( $image ) ? (string) $id : '' ); ?>" data-indexpilot-search-id>
+						<span class="indexpilot-label"><?php echo esc_html( $names[ $ratio ] ); ?></span>
+						<div class="indexpilot-search-thumb" style="aspect-ratio: <?php echo esc_attr( $spec[0] . ' / ' . $spec[1] ); ?>;" data-indexpilot-search-preview>
+							<?php if ( is_array( $image ) ) : ?>
+								<img src="<?php echo esc_url( (string) wp_get_attachment_image_url( $id, 'large' ) ); ?>" alt="">
+							<?php endif; ?>
+						</div>
+						<p class="description" data-indexpilot-search-size>
+							<?php
+							echo esc_html(
+								is_array( $image )
+									/* translators: 1: ширина, 2: высота картинки. */
+									? sprintf( __( '%1$d × %2$d', 'indexpilot' ), (int) $image[1], (int) $image[2] )
+									/* translators: %s: размер в пикселях. */
+									: sprintf( __( 'Лучше %s пикселей и больше.', 'indexpilot' ), $sizes[ $ratio ] )
+							);
+							?>
+						</p>
+						<p class="indexpilot-search-warn" data-indexpilot-search-warn><?php echo esc_html( $warns[ $issue ] ?? '' ); ?></p>
+						<button type="button" class="button" data-indexpilot-search-pick><?php esc_html_e( 'Загрузить или выбрать', 'indexpilot' ); ?></button>
+						<button type="button" class="button-link" data-indexpilot-search-clear><?php esc_html_e( 'Убрать', 'indexpilot' ); ?></button>
+					</div>
+				<?php endforeach; ?>
+			</div>
 		</div>
 		<?php
 	}

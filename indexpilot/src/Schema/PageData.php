@@ -17,6 +17,7 @@ use IndexPilot\Frontend\FaqBlock;
 use IndexPilot\Game\PostMaterial;
 use IndexPilot\Meta\MetaKeys;
 use IndexPilot\Meta\PrimaryCategory;
+use IndexPilot\Meta\SearchImages;
 use IndexPilot\Resolver\Context;
 use IndexPilot\Resolver\MetaResolver;
 use IndexPilot\Resolver\PostDates;
@@ -93,6 +94,8 @@ final class PageData {
 			),
 			'breadcrumbs'  => $this->trail->for_context( $context ),
 			'article'      => $post instanceof \WP_Post && ! $foreign ? $this->article( $post ) : null,
+			// Версии обложки 1:1, 4:3 и 16:9 с вкладки «Картинка в поиске»: ключ пропорции => url, width, height.
+			'images'       => $post instanceof \WP_Post && ! $foreign ? array_filter( array_map( array( $this, 'image' ), SearchImages::ids( (int) $post->ID ) ) ) : array(),
 			'profile'      => Context::AUTHOR === $context->type ? $this->profiles->get( $context->object_id ) : null,
 			// Вопросы попадают в разметку, только если блок с ними выведен на этой странице записи.
 			'faq'          => $post instanceof \WP_Post && ! $foreign && null !== $this->faq ? $this->faq->visible_items( (int) $post->ID, max( 1, $context->page ) ) : array(),

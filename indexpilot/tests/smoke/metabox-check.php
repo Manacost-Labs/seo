@@ -100,6 +100,38 @@ $_POST = array(
 wp_update_post( array( 'ID' => $post->ID ) );
 $_POST = array();
 
+// Вкладка «Картинка в поиске»: квадрат сохраняется и попадает в разметку статьи, широкая картинка в слоте 1:1 — с предупреждением.
+$search_image = static function ( int $width, int $height ): int {
+	$id = wp_insert_attachment( array( 'post_title' => 'search', 'post_mime_type' => 'image/jpeg', 'post_status' => 'inherit' ) );
+	update_post_meta( $id, '_wp_attached_file', "2026/11/search-{$width}x{$height}.jpg" );
+	wp_update_attachment_metadata( $id, array( 'width' => $width, 'height' => $height, 'file' => "2026/11/search-{$width}x{$height}.jpg" ) );
+
+	return (int) $id;
+};
+$square = $search_image( 1200, 1200 );
+$wide   = $search_image( 1176, 597 );
+$_POST  = array(
+	'indexpilot_post_nonce' => wp_create_nonce( 'indexpilot_save_post' ),
+	'indexpilot_image_1x1'  => (string) $square,
+	'indexpilot_image_4x3'  => (string) $wide,
+	'indexpilot_image_16x9' => '',
+);
+wp_update_post( array( 'ID' => $post->ID ) );
+$_POST = array();
+ob_start();
+$metabox->render( get_post( $post->ID ) );
+$images_html = (string) ob_get_clean();
+$page_html   = (string) wp_remote_retrieve_body( wp_remote_get( (string) get_permalink( $post->ID ), array( 'timeout' => 90, 'sslverify' => false ) ) );
+$article_img = array();
+if ( preg_match( '#<script type="application/ld\+json" class="indexpilot-schema">(.*?)</script>#s', $page_html, $found ) ) {
+	foreach ( (array) ( json_decode( $found[1], true )['@graph'] ?? array() ) as $node ) {
+		if ( isset( $node['headline'] ) ) {
+			$article_img = isset( $node['image']['@id'] ) ? array( $node['image'] ) : (array) ( $node['image'] ?? array() );
+		}
+	}
+}
+$article_img = array_column( $article_img, '@id' );
+
 header( 'Content-Type: application/json; charset=utf-8' );
 echo wp_json_encode(
 	array(
@@ -128,6 +160,10 @@ echo wp_json_encode(
 		'ai_alt_fills_empty'             => 'Колода Берн мага' === get_post_meta( $empty_alt, '_wp_attachment_image_alt', true ),
 		'ai_alt_keeps_own'               => 'Свой alt' === get_post_meta( $own_alt, '_wp_attachment_image_alt', true ),
 		'ai_alt_only_attachments'        => '' === get_post_meta( $post->ID, '_wp_attachment_image_alt', true ),
+		'search_images_tab'              => str_contains( $images_html, 'data-tab="images"' ) && str_contains( $images_html, 'name="indexpilot_image_1x1" value="' . $square . '"' ),
+		'search_images_saved'            => $square === (int) get_post_meta( $post->ID, MetaKeys::IMAGE_1X1, true ) && '' === (string) get_post_meta( $post->ID, MetaKeys::IMAGE_16X9, true ),
+		'search_image_wrong_shape_warns' => str_contains( $images_html, 'Пропорция не та' ),
+		'search_images_in_schema'        => in_array( get_permalink( $post->ID ) . '#image-1x1', $article_img, true ) && in_array( get_permalink( $post->ID ) . '#image-4x3', $article_img, true ),
 	),
 	JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
 );

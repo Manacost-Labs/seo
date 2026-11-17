@@ -44,6 +44,13 @@ final class MetaKeys {
 	public const PRIMARY_CATEGORY = '_indexpilot_primary_category';
 
 	/**
+	 * Вкладка «Картинка в поиске»: версии обложки в пропорциях 1:1, 4:3 и 16:9 (ID вложений) для разметки статьи.
+	 */
+	public const IMAGE_1X1  = '_indexpilot_image_1x1';
+	public const IMAGE_4X3  = '_indexpilot_image_4x3';
+	public const IMAGE_16X9 = '_indexpilot_image_16x9';
+
+	/**
 	 * Наибольшее число дополнительных ключевых слов.
 	 */
 	public const MAX_KEYWORDS = 4;
@@ -80,6 +87,9 @@ final class MetaKeys {
 			self::FAQ              => self::define( 'array', 'faq', array( 'post' ) ),
 			self::BREADCRUMB_TITLE => self::define( 'string', 'text', array( 'post' ) ),
 			self::PRIMARY_CATEGORY => self::define( 'integer', 'int', array( 'post' ) ),
+			self::IMAGE_1X1        => self::define( 'integer', 'int', array( 'post' ) ),
+			self::IMAGE_4X3        => self::define( 'integer', 'int', array( 'post' ) ),
+			self::IMAGE_16X9       => self::define( 'integer', 'int', array( 'post' ) ),
 		);
 	}
 

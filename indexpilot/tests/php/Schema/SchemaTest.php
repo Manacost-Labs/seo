@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace IndexPilot\Tests\Schema;
 
 use IndexPilot\Breadcrumbs\Trail;
+use IndexPilot\Meta\SearchImages;
 use IndexPilot\Resolver\Context;
 use IndexPilot\Schema\Graph;
 use IndexPilot\Schema\GraphBuilder;
@@ -150,6 +151,32 @@ final class SchemaTest extends TestCase {
 		self::assertSame( 3, $crumbs['itemListElement'][2]['position'] );
 		self::assertSame( 'Маг', $crumbs['itemListElement'][2]['name'] );
 		self::assertSame( 'https://site.test/category/gajdy/mag/', $crumbs['itemListElement'][2]['item'] );
+	}
+
+	public function test_article_lists_cover_versions_for_search(): void {
+		$page           = $this->article_page();
+		$page['images'] = array(
+			'1x1'  => array( 'url' => 'https://site.test/mag-1x1.jpg', 'width' => 1200, 'height' => 1200 ),
+			'16x9' => array( 'url' => 'https://site.test/mag-16x9.jpg', 'width' => 1600, 'height' => 900 ),
+		);
+
+		$graph = ( new GraphBuilder() )->build( $page );
+		$ids   = array_column( $graph->first( 'Article' )['image'], '@id' );
+
+		self::assertSame( array( 'https://site.test/gajd-mag/#primaryimage', 'https://site.test/gajd-mag/#image-1x1', 'https://site.test/gajd-mag/#image-16x9' ), $ids, 'Обложка первой, затем версии в других пропорциях.' );
+		self::assertSame( $ids[0], $graph->first( 'WebPage' )['primaryImageOfPage']['@id'], 'Главная картинка страницы — по-прежнему обложка.' );
+		self::assertSame( array(), $graph->dangling() );
+
+		unset( $page['images'] );
+		self::assertSame( 'https://site.test/gajd-mag/#primaryimage', ( new GraphBuilder() )->build( $page )->first( 'Article' )['image']['@id'], 'Без версий — одна ссылка, как раньше.' );
+	}
+
+	public function test_search_image_size_and_shape_are_checked(): void {
+		self::assertSame( SearchImages::OK, SearchImages::problem( 1200, 1200, '1x1' ) );
+		self::assertSame( SearchImages::OK, SearchImages::problem( 1600, 1210, '4x3' ), 'Пара пикселей разницы не мешает.' );
+		self::assertSame( SearchImages::SMALL, SearchImages::problem( 600, 600, '1x1' ) );
+		self::assertSame( SearchImages::SHAPE, SearchImages::problem( 1176, 597, '1x1' ), 'Широкая обложка — не квадрат.' );
+		self::assertSame( SearchImages::OK, SearchImages::problem( 1920, 1080, '16x9' ) );
 	}
 
 	public function test_archive_page_is_a_collection_without_article_and_empty_values(): void {

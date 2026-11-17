@@ -61,7 +61,13 @@ final class GraphBuilder {
 		);
 
 		if ( is_array( $page['article'] ?? null ) ) {
-			$this->add_article( $graph, $home, $url, $page['article'], $data, $language, $image_id );
+			$images = '' !== $image_id ? array( $image_id ) : array();
+
+			foreach ( (array) ( $page['images'] ?? array() ) as $ratio => $image ) {
+				$images[] = $this->add_image( $graph, IdFactory::part( $url, 'image-' . $ratio ), $image );
+			}
+
+			$this->add_article( $graph, $home, $url, $page['article'], $data, $language, array_values( array_filter( $images ) ) );
 		}
 
 		$this->add_faq( $graph, $url, (array) ( $page['faq'] ?? array() ), $language );
@@ -246,9 +252,9 @@ final class GraphBuilder {
 	 * @param array<string, mixed> $article  Данные статьи.
 	 * @param array<string, mixed> $data     Данные страницы.
 	 * @param string               $language Язык.
-	 * @param string               $image_id Идентификатор узла картинки или пустая строка.
+	 * @param list<string>         $images   Идентификаторы узлов картинок: обложка и её версии в других пропорциях.
 	 */
-	private function add_article( Graph $graph, string $home, string $url, array $article, array $data, string $language, string $image_id ): void {
+	private function add_article( Graph $graph, string $home, string $url, array $article, array $data, string $language, array $images ): void {
 		$author_id = $this->add_person( $graph, $home, (array) ( $article['author'] ?? array() ) );
 
 		$graph->add(
@@ -263,7 +269,8 @@ final class GraphBuilder {
 				// Без автора-человека (у колод автора нет) автором считается сайт: Google принимает организацию.
 				'author'           => array( '@id' => '' !== $author_id ? $author_id : IdFactory::organization( $home ) ),
 				'publisher'        => array( '@id' => IdFactory::organization( $home ) ),
-				'image'            => '' !== $image_id ? array( '@id' => $image_id ) : null,
+				// Несколько пропорций — списком: Google выбирает подходящую для выдачи, Discover и карусели.
+				'image'            => count( $images ) > 1 ? array_map( static fn( string $id ): array => array( '@id' => $id ), $images ) : ( $images ? array( '@id' => $images[0] ) : null ),
 				'datePublished'    => (string) ( $data['published'] ?? '' ),
 				'dateModified'     => (string) ( $data['modified'] ?? '' ),
 				'articleSection'   => (string) ( $article['section'] ?? '' ),

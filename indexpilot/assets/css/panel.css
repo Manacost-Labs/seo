@@ -888,3 +888,47 @@
 .indexpilot-ai-bar .indexpilot-status:empty {
 	display: none;
 }
+
+/* Вкладка «Картинка в поиске». */
+.indexpilot-panel .indexpilot-search-cover {
+	display: flex;
+	gap: 16px;
+	align-items: center;
+	margin: 12px 0 16px;
+}
+
+.indexpilot-panel .indexpilot-search-cover .indexpilot-search-thumb {
+	flex: 0 0 120px;
+}
+
+.indexpilot-panel .indexpilot-search-slots {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 16px;
+}
+
+.indexpilot-panel .indexpilot-search-thumb {
+	overflow: hidden;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	background: #f0f0f1;
+}
+
+.indexpilot-panel .indexpilot-search-slot .indexpilot-search-thumb {
+	margin: 6px 0;
+}
+
+.indexpilot-panel .indexpilot-search-thumb img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.indexpilot-panel .indexpilot-search-warn {
+	color: #b32d2e;
+}
+
+.indexpilot-panel .indexpilot-search-warn:empty {
+	display: none;
+}
