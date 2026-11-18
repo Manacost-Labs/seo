@@ -21,6 +21,30 @@ final class NotFoundLogTest extends TestCase {
 		self::assertSame( array(), $store->rows );
 	}
 
+	public function test_scanner_probes_are_noise(): void {
+		$store = new ArrayNotFoundStore();
+		$log   = new NotFoundLog( $store );
+
+		// Адреса из журнала hs-manacost.ru за первые два дня: сканеры заняли больше половины строк.
+		$probes = array( '/actuator/env', '/actuator/heapdump', '/phpinfo', '/_profiler/phpinfo', '/symfony/_profiler/phpinfo', '/Dockerfile', '/Jenkinsfile', '/terraform.tfstate', '/terraform.tfvars', '/netlify.toml', '/web.config', '/elmah.axd', '/server-status', '/telescope/requests', '/metrics', '/debug/vars', '/swagger', '/api-docs', '/graphql', '/console', '/proc/self/environ', '/v2/_catalog', '/api/session/properties', '/api/v1/namespaces/default/secrets', '/settings/api-keys', '/settings/webhooks', '/billing', '/settings.py', '/credentials', '/env', '/wordpress', '/wp/', '/__manacost_header_check_missing__/' );
+
+		foreach ( $probes as $url ) {
+			self::assertFalse( $log->record( $url ), $url );
+		}
+
+		self::assertSame( array(), $store->rows );
+	}
+
+	public function test_article_slugs_with_scanner_words_are_logged(): void {
+		$store = new ArrayNotFoundStore();
+		$log   = new NotFoundLog( $store );
+
+		// Слово сканера внутри ярлыка — это статья, а не проба.
+		foreach ( array( '/debug-mag-gajd/', '/gajd-po-konsoli-metrics/', '/apidocs-hs/', '/kolody/api/', '/wp-kolody-2026/', '/env-shaman/' ) as $url ) {
+			self::assertTrue( $log->record( $url ), $url );
+		}
+	}
+
 	public function test_hundred_hits_make_one_row_with_counter(): void {
 		$store = new ArrayNotFoundStore();
 		$log   = new NotFoundLog( $store );

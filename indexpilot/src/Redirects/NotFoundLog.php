@@ -28,12 +28,12 @@ final class NotFoundLog {
 	/**
 	 * Расширения файлов: обращения к ним — не страницы сайта.
 	 */
-	private const FILE_EXTENSIONS = 'php|php\d|phtml|asp|aspx|jsp|cgi|pl|env|ini|cfg|conf|sql|bak|old|orig|swp|zip|gz|tgz|tar|rar|7z|log|txt|xml|json|yml|yaml|sh|exe|dll|png|jpe?g|gif|webp|avif|svg|ico|bmp|tiff?|css|js|mjs|map|woff2?|ttf|otf|eot|mp4|webm|mp3|pdf';
+	private const FILE_EXTENSIONS = 'php|php\d|phtml|asp|aspx|axd|ashx|asmx|cfm|jsp|py|rb|jar|war|cgi|pl|env|ini|cfg|conf|config|toml|properties|tfstate|tfvars|lock|pem|key|crt|db|sqlite|sql|bak|old|orig|swp|zip|gz|tgz|tar|rar|7z|log|txt|xml|json|yml|yaml|sh|exe|dll|png|jpe?g|gif|webp|avif|svg|ico|bmp|tiff?|css|js|mjs|map|woff2?|ttf|otf|eot|mp4|webm|mp3|pdf';
 
 	/**
-	 * Служебные адреса и типичные цели сканеров уязвимостей.
+	 * Служебные адреса и типичные цели сканеров уязвимостей: целая часть адреса, а не кусок ярлыка статьи.
 	 */
-	private const NOISE_PATHS = '#/\.|(^|/)(wp-admin|wp-login|wp-includes|wp-content|wp-json|xmlrpc|cgi-bin|phpmyadmin|pma|myadmin|vendor|node_modules|admin|administrator|backup|config|setup|install)(/|$|\.)#i';
+	private const NOISE_PATHS = '#/\.|/__|^/api(/|$)|(^|/)(wp-admin|wp-login|wp-includes|wp-content|wp-json|xmlrpc|cgi-bin|phpmyadmin|pma|myadmin|vendor|node_modules|admin|administrator|backup|config|setup|install|actuator|_profiler|telescope|server-status|server-info|phpinfo|dockerfile|jenkinsfile|docker-compose|swagger|swagger-ui|api-docs|graphql|console|debug|metrics|proc|api-keys|webhooks|billing|_catalog|credentials|env|wordpress|wp)(/|$|\.)#i';
 
 	public function __construct( private NotFoundStore $store ) {
 	}
