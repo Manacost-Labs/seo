@@ -406,7 +406,8 @@ final class ClassicMetabox {
 				<?php endif; ?>
 				<p class="indexpilot-field">
 					<label for="indexpilot_canonical"><?php esc_html_e( 'Основная версия страницы для поисковиков (не редирект)', 'indexpilot' ); ?></label> <?php HelpTip::render( __( 'обычно ничего. Заполняйте, только если эта страница — копия или старая версия другой, и в поиске должна быть та, другая: впишите её полный адрес. Пусто или адрес этой же записи — ничего не меняется.', 'indexpilot' ), __( 'это только подсказка поисковикам, какую из страниц-дублей показывать. Посетителя поле никуда не перебрасывает: он по-прежнему видит эту страницу. Чтобы переводить посетителей на другой адрес, нужен редирект (IndexPilot → Техника → Редиректы). Внимание: страница с чужим адресом в этом поле из поиска пропадёт.', 'indexpilot' ) ); ?>
-					<input type="url" id="indexpilot_canonical" name="indexpilot_canonical" class="large-text" value="<?php echo esc_attr( $value( MetaKeys::CANONICAL ) ); ?>" placeholder="<?php echo esc_attr( (string) get_permalink( $post ) ); ?>">
+					<input type="url" id="indexpilot_canonical" name="indexpilot_canonical" class="large-text" aria-describedby="indexpilot-canonical-warning" value="<?php echo esc_attr( $value( MetaKeys::CANONICAL ) ); ?>" placeholder="<?php echo esc_attr( (string) get_permalink( $post ) ); ?>">
+					<span id="indexpilot-canonical-warning" role="alert" hidden><?php esc_html_e( 'Проверьте canonical. Введите полный адрес страницы с доменом и https:// или http://. Оставьте поле пустым, чтобы использовать адрес этой публикации.', 'indexpilot' ); ?></span>
 					<span class="description">
 						<?php esc_html_e( 'Обычно пусто. Посетителей не перенаправляет — только подсказывает поисковикам, какая из страниц-дублей основная (в поисковых системах это называется canonical). Пусто или адрес этой записи — ничего не меняется.', 'indexpilot' ); ?>
 						<?php

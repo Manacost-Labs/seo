@@ -17,6 +17,15 @@
 	}
 
 	var DEBOUNCE_MS = 600;
+	var canonicalInput = root.querySelector( '#indexpilot_canonical' );
+	var canonicalNotice = root.querySelector( '#indexpilot-canonical-warning' );
+	if ( canonicalInput && canonicalNotice ) {
+		var checkCanonical = function () {
+			canonicalNotice.hidden = ! utils.canonicalLooksInvalid( canonicalInput.value, config.homeUrl );
+		};
+		canonicalInput.addEventListener( 'input', checkCanonical );
+		checkCanonical();
+	}
 	var MOBILE_DESCRIPTION = 120;
 	var MAX_KEYWORDS = 4;
 

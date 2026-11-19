@@ -4,7 +4,7 @@ Tags: seo, sitemap, schema, hearthstone, indexnow
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.0-rc13
+Stable tag: 1.0.0-rc14
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,9 @@ SEO для Hearthstone-сайтов: мета-теги, предпросмотр
 Удаление плагина стирает его данные только если в «IndexPilot» → «Настройки» отмечено «Удаление плагина: при удалении плагина стереть все его данные и настройки». Без этой настройки мета, настройки и таблицы остаются в базе.
 
 == Changelog ==
+
+= 1.0.0-rc14 =
+Редактор предупреждает о некорректном адресе в поле canonical.
 
 = 1.0.0-rc13 =
 Справочник героев и проверка кодов колод Koloda. Согласованы основная картинка статьи и предпросмотр.

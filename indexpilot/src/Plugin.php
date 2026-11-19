@@ -122,7 +122,7 @@ use IndexPilot\Variables\VariableRegistry;
  */
 final class Plugin {
 
-	public const VERSION = '1.0.0-rc13';
+	public const VERSION = '1.0.0-rc14';
 
 	/**
 	 * Единственный экземпляр.

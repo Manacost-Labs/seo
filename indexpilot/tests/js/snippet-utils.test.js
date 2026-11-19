@@ -5,6 +5,17 @@ const utils = require( '../../assets/js/snippet-utils.js' );
 // Условная ширина: 10 px на символ.
 const measure = ( text ) => text.length * 10;
 
+test( 'canonical допускает пустое поле и другой сайт, предупреждает о ключевых словах и обрывках URL', () => {
+	const site = 'https://hs-manacost.ru/';
+	for ( const value of [ '', site, 'https://kolodahearthstone.com/гайд/', 'https://пример.рф/гайд' ] ) {
+		assert.equal( utils.canonicalLooksInvalid( value, site ), false, value );
+	}
+	for ( const value of [ 'Рено, Ульдум', '/teorikraft/', 'http://spell-tempo-mag-yarmarka-bezumiya', 'http://wow%20classic,%20карты', 'https://login@example.org/' ] ) {
+		assert.equal( utils.canonicalLooksInvalid( value, site ), true, value );
+	}
+	assert.equal( utils.canonicalLooksInvalid( 'http://localhost/guide', 'http://localhost/' ), false );
+} );
+
 test( 'заголовок, который помещается, не меняется', () => {
 	assert.equal( utils.truncateToWidth( 'Колода мага', 580, measure ), 'Колода мага' );
 } );

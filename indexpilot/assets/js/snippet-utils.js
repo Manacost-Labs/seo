@@ -200,7 +200,28 @@
 			} ).length;
 	}
 
+	/** Проверяет ручной canonical перед сохранением. Пустое поле включает автоматический адрес. */
+	function canonicalLooksInvalid( value, siteUrl ) {
+		value = String( value || '' ).trim();
+		if ( ! value ) {
+			return false;
+		}
+		if ( ! /^https?:\/\//i.test( value ) || /[\s\\<>]/.test( value ) ) {
+			return true;
+		}
+		try {
+			var url = new URL( value );
+			var host = url.hostname;
+			return !! ( url.username || url.password ) || (
+				host.indexOf( '.' ) === -1 && host.indexOf( ':' ) === -1 && host !== new URL( siteUrl ).hostname
+			);
+		} catch ( error ) {
+			return true;
+		}
+	}
+
 	return {
+		canonicalLooksInvalid: canonicalLooksInvalid,
 		truncateToWidth: truncateToWidth,
 		truncateChars: truncateChars,
 		breadcrumb: breadcrumb,
